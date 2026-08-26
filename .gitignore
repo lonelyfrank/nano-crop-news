@@ -1,0 +1,14 @@
+.env
+.DS_Store
+
+# Frontend (Nuxt)
+/frontend/node_modules
+/frontend/.nuxt
+/frontend/.output
+/frontend/.data
+/frontend/dist
+/frontend/.env
+
+# Supabase CLI
+/supabase/.branches
+/supabase/.temp
