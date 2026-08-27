@@ -1,43 +1,36 @@
 export interface ClusterCandidate {
   id: number
   title: string
+  source_id: number
   cluster_id: number | null
-}
-
-export interface ClustererDeps {
-  windowHours: number
-  similarityThreshold: number
-  findCandidates: (excludeSourceId: number, sinceIso: string) => Promise<ClusterCandidate[]>
-  createCluster: (mainArticleId: number) => Promise<number>
 }
 
 /**
  * Deduplica/clusterizza la stessa notizia raccontata da fonti diverse,
  * confrontando i titoli con un coefficiente di similarity a bigrammi
  * (equivalente allo scopo di similar_text() di PHP usato nella prima
- * versione Laravel di questo progetto). Un cluster nasce solo quando viene
- * trovato un secondo articolo abbastanza simile: un articolo isolato resta
- * senza cluster_id finché non arriva un match.
+ * versione Laravel di questo progetto).
+ *
+ * Pura (nessun accesso DB): riceve un pool di articoli candidati già
+ * caricato una volta sola per l'intera invocazione (vedi index.ts), invece
+ * di interrogare il database per ogni singolo articolo — con molte fonti
+ * quest'ultimo approccio esauriva le risorse della Edge Function.
  */
-export async function findClusterIdFor(
+export function findMatchingCandidate(
   title: string,
   excludeSourceId: number,
-  deps: ClustererDeps,
-): Promise<number | null> {
+  candidates: ClusterCandidate[],
+  similarityThreshold: number,
+): ClusterCandidate | null {
   const normalizedTitle = normalize(title)
   if (!normalizedTitle) return null
 
-  const since = new Date(Date.now() - deps.windowHours * 60 * 60 * 1000).toISOString()
-  const candidates = await deps.findCandidates(excludeSourceId, since)
-
   for (const candidate of candidates) {
-    const score = diceCoefficient(normalizedTitle, normalize(candidate.title))
+    if (candidate.source_id === excludeSourceId) continue
 
-    if (score >= deps.similarityThreshold) {
-      if (candidate.cluster_id !== null) {
-        return candidate.cluster_id
-      }
-      return await deps.createCluster(candidate.id)
+    const score = diceCoefficient(normalizedTitle, normalize(candidate.title))
+    if (score >= similarityThreshold) {
+      return candidate
     }
   }
 

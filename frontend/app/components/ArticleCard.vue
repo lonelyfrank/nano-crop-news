@@ -87,6 +87,18 @@ function markAsRead() {
   min-width: 0;
 }
 
+@media (max-width: 480px) {
+  .article-card {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .article-image {
+    width: 100%;
+    height: 160px;
+  }
+}
+
 .article-source {
   display: flex;
   align-items: center;

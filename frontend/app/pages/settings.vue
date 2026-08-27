@@ -3,21 +3,8 @@
     <h1>Impostazioni</h1>
     <p class="hint">Scegli le fonti e i tag che vuoi seguire: verranno usati nella scheda "I miei interessi" del feed.</p>
 
-    <section class="pref-section">
-      <h2>Fonti</h2>
-      <label v-for="source in sources" :key="source.id" class="pref-row">
-        <input v-model="selectedSourceIds" type="checkbox" :value="source.id">
-        {{ source.name }}
-      </label>
-    </section>
-
-    <section class="pref-section">
-      <h2>Tag</h2>
-      <label v-for="tag in tags" :key="tag.id" class="pref-row">
-        <input v-model="selectedTagIds" type="checkbox" :value="tag.id">
-        {{ tag.name }}
-      </label>
-    </section>
+    <CheckboxGroup v-model="selectedSourceIds" :items="sources" label="Fonti" />
+    <CheckboxGroup v-model="selectedTagIds" :items="tags" label="Tag" />
 
     <button class="save-button" :disabled="saving" @click="save">
       {{ saving ? 'Salvataggio…' : 'Salva preferenze' }}
@@ -86,17 +73,6 @@ async function save() {
 <style scoped>
 .hint {
   color: var(--muted-text);
-}
-
-.pref-section {
-  margin-bottom: 1.5rem;
-}
-
-.pref-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
 }
 
 .save-button {

@@ -8,7 +8,29 @@ insert into public.sources (name, rss_url, website_url, category) values
   ('Wired Italia', 'https://www.wired.it/feed/rss', 'https://www.wired.it', 'Tecnologia'),
   ('BBC News', 'http://feeds.bbci.co.uk/news/rss.xml', 'https://www.bbc.com/news', 'Attualità'),
   ('TechCrunch', 'https://techcrunch.com/feed/', 'https://techcrunch.com', 'Tecnologia'),
-  ('The Verge', 'https://www.theverge.com/rss/index.xml', 'https://www.theverge.com', 'Tecnologia')
+  ('The Verge', 'https://www.theverge.com/rss/index.xml', 'https://www.theverge.com', 'Tecnologia'),
+
+  -- Fonti per categoria, mix italiano/internazionale (tutte verificate live:
+  -- HTTP 200 + XML valido, prima dell'inserimento qui).
+  ('ANSA - Politica', 'https://www.ansa.it/sito/notizie/politica/politica_rss.xml', 'https://www.ansa.it', 'Politica'),
+  ('ANSA - Economia', 'https://www.ansa.it/sito/notizie/economia/economia_rss.xml', 'https://www.ansa.it', 'Economia'),
+  ('ANSA - Sport', 'https://www.ansa.it/sito/notizie/sport/sport_rss.xml', 'https://www.ansa.it', 'Sport'),
+  ('ANSA - Cultura', 'https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml', 'https://www.ansa.it', 'Cultura'),
+  ('ANSA - Mondo', 'https://www.ansa.it/sito/notizie/mondo/mondo_rss.xml', 'https://www.ansa.it', 'Mondo'),
+  -- Nota: "ANSA - Tecnologia" esclusa dopo verifica: il feed risponde 200
+  -- ma tutti gli articoli sono fermi a maggio 2023 (feed abbandonato).
+  -- Tecnologia resta comunque coperta da Wired Italia, TechCrunch, The
+  -- Verge, BBC Technology.
+  ('Rai News - Esteri', 'https://www.rainews.it/rss/esteri', 'https://www.rainews.it', 'Mondo'),
+  ('Rai News - Sport', 'https://www.rainews.it/rss/sport', 'https://www.rainews.it', 'Sport'),
+  -- Nota: "Gazzetta dello Sport" (gazzetta.it/rss/home.xml) è stata esclusa
+  -- dopo verifica: il feed risponde 200 ma contiene articoli del 2022-2023,
+  -- non notizie correnti (lastBuildDate anch'esso fermo a gennaio 2024).
+  ('BBC World', 'https://feeds.bbci.co.uk/news/world/rss.xml', 'https://www.bbc.com/news/world', 'Mondo'),
+  ('BBC Business', 'https://feeds.bbci.co.uk/news/business/rss.xml', 'https://www.bbc.com/news/business', 'Economia'),
+  ('BBC Technology', 'https://feeds.bbci.co.uk/news/technology/rss.xml', 'https://www.bbc.com/news/technology', 'Tecnologia'),
+  ('BBC Sport', 'https://feeds.bbci.co.uk/sport/rss.xml?edition=uk', 'https://www.bbc.com/sport', 'Sport'),
+  ('BBC Science', 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', 'https://www.bbc.com/news/science_and_environment', 'Scienza')
 on conflict (rss_url) do nothing;
 
 -- Tag di esempio per la pagina impostazioni. Nessuna logica automatica

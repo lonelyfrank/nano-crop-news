@@ -55,6 +55,26 @@ supabase/
   applicativa in questa fase: sono pronte per il futuro modulo di ricerca
   semantica/Q&A.
 
+### Scalabilità della ingestion
+
+Con poche fonti l'approccio più ingenuo (una query DB per ogni singolo
+articolo, sia per il dedup sia per il clustering) funziona, ma con ~20 fonti
+attive è andato in `WORKER_RESOURCE_LIMIT` (risorse della Edge Function
+esaurite) — trovato e corretto in questa sessione. La function ora:
+
+- fa **una sola query di dedup** per fonte (`select ... where original_url in
+  (...)`) invece di una per articolo, e **un solo insert batch** per fonte;
+- carica il pool di candidati per il clustering **una volta per invocazione**
+  (`CANDIDATE_POOL_LIMIT`, default 300 articoli recenti), aggiornandolo in
+  memoria invece di interrogare il DB per ogni articolo;
+- limita gli item processati per fonte a invocazione (`MAX_ITEMS_PER_SOURCE`,
+  default 30): alcuni feed (categorie ANSA, per esempio) possono restituire
+  centinaia di item in un colpo solo, e non serve un backfill storico
+  profondo per un aggregatore di notizie correnti.
+
+Se in futuro aggiungi molte altre fonti e rivedi questi limiti, tieni a mente
+che il costo del matching di similarity è O(nuovi articoli × dimensione pool).
+
 ### Limite noto: assegnazione tag
 
 `tags`/`article_tag` esistono e sono usati dalla pagina impostazioni e da "i
@@ -136,7 +156,21 @@ Risposta attesa: `{"created": N, "report": {"Nome fonte": "X nuovi articoli (Y n
 Se una fonte dà errore HTTP 403/404, il suo feed potrebbe aver cambiato URL o
 bloccare richieste automatizzate — verifica manualmente l'URL nel browser
 (è già successo con "Il Post": la spec richiedeva `/feed`, non `/feed/`, che
-qui dà 403 — corretto nel seed).
+qui dà 403 — corretto nel seed). Verifica anche la **freschezza** dei dati,
+non solo l'HTTP status: un feed può rispondere 200 con XML valido ma
+contenere solo articoli vecchi di anni (è successo con "Gazzetta dello
+Sport" e "ANSA - Tecnologia", rimosse dal seed dopo averlo controllato con
+`select min(published_at), max(published_at) ... group by source`).
+
+### Fonti attualmente seedate (19)
+
+Mix italiano/internazionale per categoria (`supabase/seed.sql`): attualità
+generalista (Il Post, ANSA Homepage, Il Fatto Quotidiano, BBC News), e poi
+per sezione — Politica (ANSA), Economia (ANSA, BBC Business), Sport (ANSA,
+Rai News, BBC Sport), Cultura (ANSA), Mondo (ANSA, Rai News, BBC World),
+Tecnologia (Wired Italia, TechCrunch, The Verge, BBC Technology), Scienza
+(BBC Science). Ogni URL è stato verificato live (HTTP 200 + XML valido +
+date recenti) prima dell'inserimento.
 
 ### 4. Frontend
 
@@ -158,6 +192,25 @@ preferenze in Impostazioni.
 - Imposta le environment variable del progetto Vercel: `SUPABASE_URL`,
   `SUPABASE_KEY` (la stessa anon/public key, **mai** la service role key).
 - Deploy.
+
+## Frontend: layout e filtri
+
+- **Toolbar** (`app.vue`, globale, minimale): logo, link Impostazioni,
+  email/logout o link login. Sticky in cima.
+- **Home** (`pages/index.vue`): layout a due colonne, feed a sinistra e
+  sidebar filtri a destra (checkbox multi-selezione su fonti e tag, toggle
+  "I miei interessi"). Sotto i 768px la sidebar diventa un drawer a comparsa
+  da destra, aperto da un bottone "Filtri" sopra il feed — nessuna libreria
+  UI, solo CSS (media query + transizione) e un booleano.
+- I filtri della sidebar sono **manuali/di sessione** (non salvati): "I miei
+  interessi" invece usa le preferenze salvate in Impostazioni (RPC
+  `get_my_feed`) e per questo, quando è attivo, i filtri manuali vengono
+  nascosti (l'RPC non li considera comunque).
+- `components/CheckboxGroup.vue` è condiviso tra la sidebar della home e la
+  pagina Impostazioni, per non duplicare il markup.
+- Responsive: viewport meta impostato in `nuxt.config.ts`; `ArticleCard`
+  passa da riga a colonna sotto 480px; breakpoint principale a 768px per il
+  passaggio sidebar/drawer.
 
 ## Predisposizione per l'AI futura
 

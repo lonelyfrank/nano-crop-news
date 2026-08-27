@@ -1,19 +1,30 @@
 <template>
-  <div>
-    <div class="filters">
-      <select v-model="selectedSourceId" @change="resetAndReload">
-        <option value="">Tutte le fonti</option>
-        <option v-for="source in sources" :key="source.id" :value="source.id">
-          {{ source.name }}
-        </option>
-      </select>
+  <div class="home-layout">
+    <div class="feed-column">
+      <div class="mobile-filters-bar">
+        <button class="filters-toggle" @click="showFilters = true">
+          Filtri
+        </button>
+      </div>
 
-      <select v-model="selectedTagId" @change="resetAndReload">
-        <option value="">Tutti i tag</option>
-        <option v-for="tag in tags" :key="tag.id" :value="tag.id">
-          {{ tag.name }}
-        </option>
-      </select>
+      <p v-if="!articles.length && !pending">Nessun articolo trovato.</p>
+
+      <ArticleCard v-for="article in articles" :key="article.id" :article="article" />
+
+      <div ref="sentinel" class="sentinel" />
+      <p v-if="pending" class="loading">Caricamento…</p>
+      <p v-if="!hasMore && articles.length && !pending" class="loading">
+        Non ci sono altri articoli.
+      </p>
+    </div>
+
+    <div v-if="showFilters" class="backdrop" @click="showFilters = false" />
+
+    <aside class="sidebar" :class="{ open: showFilters }">
+      <div class="sidebar-header">
+        <h2>Filtri</h2>
+        <button class="sidebar-close" aria-label="Chiudi filtri" @click="showFilters = false">×</button>
+      </div>
 
       <button
         v-if="user"
@@ -23,17 +34,21 @@
       >
         I miei interessi
       </button>
-    </div>
 
-    <p v-if="!articles.length && !pending">Nessun articolo trovato.</p>
-
-    <ArticleCard v-for="article in articles" :key="article.id" :article="article" />
-
-    <div ref="sentinel" class="sentinel" />
-    <p v-if="pending" class="loading">Caricamento…</p>
-    <p v-if="!hasMore && articles.length && !pending" class="loading">
-      Non ci sono altri articoli.
-    </p>
+      <template v-if="!onlyMine">
+        <CheckboxGroup v-model="selectedSourceIds" :items="sources" label="Fonti" />
+        <CheckboxGroup
+          v-model="selectedTagIds"
+          :items="tags"
+          label="Tag"
+          hint="Nessun articolo ha ancora tag assegnati automaticamente: questo filtro può non restituire risultati."
+        />
+      </template>
+      <p v-else class="mine-note">
+        I filtri manuali sono disattivi con "I miei interessi" attivo: qui vedi il
+        feed basato sulle fonti/tag salvati in Impostazioni.
+      </p>
+    </aside>
   </div>
 </template>
 
@@ -50,8 +65,9 @@ const cursor = ref<string | null>(null)
 const hasMore = ref(true)
 const pending = ref(false)
 const onlyMine = ref(false)
-const selectedSourceId = ref<number | ''>('')
-const selectedTagId = ref<number | ''>('')
+const selectedSourceIds = ref<number[]>([])
+const selectedTagIds = ref<number[]>([])
+const showFilters = ref(false)
 
 const sources = ref<Source[]>([])
 const tags = ref<Tag[]>([])
@@ -69,9 +85,9 @@ async function loadFilters() {
 
 async function fetchMainFeedPage(): Promise<Article[]> {
   // "tags!inner" forza il join a restringere anche le righe di articles
-  // quando si filtra per tag_id (con "tags" semplice, PostgREST filtra solo
+  // quando si filtra per tag (con "tags" semplice, PostgREST filtra solo
   // l'array annidato, non le righe genitore).
-  const tagsEmbed = selectedTagId.value ? 'tags!inner(id, name)' : 'tags(id, name)'
+  const tagsEmbed = selectedTagIds.value.length ? 'tags!inner(id, name)' : 'tags(id, name)'
 
   let query = supabase
     .from('articles')
@@ -79,11 +95,11 @@ async function fetchMainFeedPage(): Promise<Article[]> {
     .order('published_at', { ascending: false })
     .limit(PAGE_SIZE)
 
-  if (selectedSourceId.value) {
-    query = query.eq('source_id', selectedSourceId.value)
+  if (selectedSourceIds.value.length) {
+    query = query.in('source_id', selectedSourceIds.value)
   }
-  if (selectedTagId.value) {
-    query = query.eq('tags.id', selectedTagId.value)
+  if (selectedTagIds.value.length) {
+    query = query.in('tags.id', selectedTagIds.value)
   }
   if (cursor.value) {
     query = query.lt('published_at', cursor.value)
@@ -134,6 +150,11 @@ function toggleMine() {
   resetAndReload()
 }
 
+// I filtri manuali sono nascosti (non distrutti) quando "onlyMine" è attivo,
+// quindi non serve guardia extra qui: l'utente non può cambiarli in quello
+// stato.
+watch([selectedSourceIds, selectedTagIds], resetAndReload, { deep: true })
+
 let observer: IntersectionObserver | null = null
 
 onMounted(async () => {
@@ -156,23 +177,53 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.filters {
+.home-layout {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2rem;
 }
 
-.filters select,
-.toggle-mine {
-  padding: 0.4rem 0.6rem;
+.feed-column {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-filters-bar {
+  display: none;
+  margin-bottom: 1rem;
+}
+
+.filters-toggle {
+  padding: 0.5rem 1rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--card-bg);
   color: var(--text);
+  cursor: pointer;
+}
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 4.5rem;
+  max-height: calc(100vh - 5.5rem);
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  display: none;
 }
 
 .toggle-mine {
+  display: block;
+  width: 100%;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -180,6 +231,16 @@ onBeforeUnmount(() => {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
+}
+
+.mine-note {
+  font-size: 0.85rem;
+  color: var(--muted-text);
+  line-height: 1.4;
+}
+
+.backdrop {
+  display: none;
 }
 
 .loading {
@@ -190,5 +251,58 @@ onBeforeUnmount(() => {
 
 .sentinel {
   height: 1px;
+}
+
+@media (max-width: 768px) {
+  .home-layout {
+    flex-direction: column;
+  }
+
+  .mobile-filters-bar {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    height: 100vh;
+    width: min(320px, 85vw);
+    z-index: 40;
+    margin: 0;
+    padding: 1.25rem;
+    background: var(--card-bg);
+    box-shadow: -6px 0 20px rgba(0, 0, 0, 0.25);
+    transition: right 0.25s ease;
+    overflow-y: auto;
+  }
+
+  .sidebar.open {
+    right: 0;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .sidebar-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 30;
+  }
 }
 </style>
