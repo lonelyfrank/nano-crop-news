@@ -32,8 +32,8 @@ Aggregatore di notizie personale, gratuito e open-source, ispirato a
 
 ```
 frontend/                Next.js — UI + script di ingestion, deploy su Vercel
-  app/                    Pagine (App Router), incluso app/map e app/api/map/*
-  components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header, MapView)
+  app/                    Pagine (App Router): map, trends, api/map/*
+  components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header, MapView, TimeRangeFilter)
   lib/supabase/           Client Supabase (browser/server/proxy — pattern @supabase/ssr)
   lib/geo-tagging/        Pipeline di geo-tagging rule-based (Macro Step 2), riusata anche dalla mappa
   lib/redis.ts            Cache Redis generica (ingestion + Route Handler mappa)
@@ -314,12 +314,43 @@ a livello paese.
   critica da API esterne a pagamento o con free tier limitato". Da valutare
   solo se emerge un bisogno reale.
 
-## Roadmap (Macro Step 4-6, non ancora implementati)
+## Tendenze e timeline (Macro Step 4)
 
-- **Step 4 — Tendenze/timeline**: aggregazioni su `article_regions` e sui
-  cluster di duplicati (già esistenti, `article_clusters`), filtri `?from=&to=`.
-- **Step 5 — UX**: tre viste (Feed, Tendenze, Mappa), ricerca full-text, dark
-  mode, PWA, skeleton loader, "salva per dopo".
+Nessuna nuova pipeline dati: solo aggregazioni su ciò che esiste già
+(`article_clusters` dello Step 1, `article_regions` dello Step 2,
+`published_at`), più un filtro temporale condiviso da feed/mappa/tendenze.
+
+- **`get_trending_clusters(p_from, p_to, p_limit)`** (nuova RPC): "storia di
+  tendenza" = cluster con **almeno 2 fonti distinte** nella finestra scelta,
+  ordinato per numero di fonti poi di articoli. Ritorna l'articolo più
+  recente del cluster (stesso pattern jsonb annidato di `get_my_feed`).
+- **`get_region_article_counts`, `get_articles_for_region`, `get_my_feed`**:
+  estese con `p_from`/`p_to` opzionali (default `null` = comportamento
+  identico a prima — la mappa continua a funzionare invariata quando non li
+  passa). Nota tecnica: cambiare la lista dei parametri di una funzione
+  Postgres richiede **droppare la vecchia firma esplicitamente** prima del
+  `create or replace`, altrimenti Postgres la tratta come un overload
+  distinto invece che sostituirla, e PostgREST fallisce con "funzione
+  ambigua" chiamandola con meno argomenti.
+- **`components/TimeRangeFilter.tsx`**: bottoni preset (Ultime 24h / Ultimi
+  3 giorni / Ultima settimana / Sempre) invece di un vero slider
+  trascinabile — stesso risultato funzionale (filtrare per intervallo),
+  senza introdurre una libreria di slider. Riusato in `/`, `/map`, `/trends`
+  in modo indipendente (nessuno stato condiviso tra pagine).
+- **`app/trends`** (nuova pagina "Tendenze", default "Ultimi 3 giorni"):
+  storie di tendenza (`ArticleCard` con la nuova prop opzionale `badge`, es.
+  "3 fonti") e zone di tendenza (lista classificata, ogni riga linka
+  `/map?region={id}` — `MapView` legge il parametro e seleziona
+  automaticamente quella zona al caricamento).
+- Sulla mappa, `from`/`to` sono passati a `/api/map/regions` e
+  `/api/map/news`; **la chiave di cache Redis li include**, altrimenti
+  richieste con range diversi si sovrascriverebbero a vicenda in cache.
+
+## Roadmap (Macro Step 5-6, non ancora implementati)
+
+- **Step 5 — UX**: tre viste (Feed, Tendenze, Mappa) con navigazione
+  unificata (oggi sono link indipendenti nell'header), ricerca full-text,
+  dark mode con toggle manuale, PWA, skeleton loader, "salva per dopo".
 - **Step 6 — Architettura/privacy**: rate limiting (Upstash), informativa
   privacy, documentazione dei limiti noti della pipeline di geo-tagging.
 

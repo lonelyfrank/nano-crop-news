@@ -1,0 +1,49 @@
+.section {
+  margin-top: 2rem;
+}
+
+.section h2 {
+  margin-bottom: 0.25rem;
+}
+
+.hint {
+  color: var(--muted-text);
+  font-size: 0.9rem;
+}
+
+.regionList {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  counter-reset: rank;
+}
+
+.regionList li {
+  counter-increment: rank;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.regionList li::before {
+  content: counter(rank) '.';
+  display: inline-block;
+  width: 1.75rem;
+  color: var(--muted-text);
+}
+
+.regionList a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.regionList a:hover {
+  color: var(--accent);
+}
+
+.count {
+  color: var(--muted-text);
+  font-size: 0.85rem;
+}

@@ -6,7 +6,7 @@ import type { Article } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import styles from './ArticleCard.module.css'
 
-export default function ArticleCard({ article }: { article: Article }) {
+export default function ArticleCard({ article, badge }: { article: Article; badge?: string }) {
   const [user, setUser] = useState<User | null>(null)
   const supabase = createClient()
 
@@ -45,6 +45,7 @@ export default function ArticleCard({ article }: { article: Article }) {
             <img src={article.source.logo_url} alt={article.source.name} className={styles.sourceLogo} />
           )}
           <span>{article.source.name}</span>
+          {badge && <span className={styles.badge}>{badge}</span>}
         </div>
 
         <h2 className={styles.title}>{article.title}</h2>

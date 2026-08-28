@@ -1,0 +1,22 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.button {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import ArticleCard from '@/components/ArticleCard'
 import CheckboxGroup from '@/components/CheckboxGroup'
+import TimeRangeFilter, { rangeForPreset } from '@/components/TimeRangeFilter'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, Source, Tag } from '@/types'
 import styles from './page.module.css'
@@ -19,6 +20,7 @@ export default function HomePage() {
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
+  const [timeRangeKey, setTimeRangeKey] = useState('all')
   const [onlyMine, setOnlyMine] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [pending, setPending] = useState(false)
@@ -30,6 +32,7 @@ export default function HomePage() {
   const onlyMineRef = useRef(false)
   const selectedSourceIdsRef = useRef<number[]>([])
   const selectedTagIdsRef = useRef<number[]>([])
+  const timeRangeKeyRef = useRef('all')
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -59,6 +62,10 @@ export default function HomePage() {
       query = query.lt('published_at', cursorRef.current)
     }
 
+    const { from, to } = rangeForPreset(timeRangeKeyRef.current)
+    if (from) query = query.gte('published_at', from)
+    if (to) query = query.lte('published_at', to)
+
     const { data, error } = await query
     if (error) throw error
 
@@ -66,9 +73,12 @@ export default function HomePage() {
   }
 
   async function fetchMyFeedPage(): Promise<Article[]> {
+    const { from, to } = rangeForPreset(timeRangeKeyRef.current)
     const { data, error } = await supabase.rpc('get_my_feed', {
       p_cursor: cursorRef.current,
       p_limit: PAGE_SIZE,
+      p_from: from,
+      p_to: to,
     })
     if (error) throw error
 
@@ -120,6 +130,12 @@ export default function HomePage() {
   function updateTagIds(next: number[]) {
     selectedTagIdsRef.current = next
     setSelectedTagIds(next)
+    resetAndReload()
+  }
+
+  function updateTimeRange(key: string) {
+    timeRangeKeyRef.current = key
+    setTimeRangeKey(key)
     resetAndReload()
   }
 
@@ -185,6 +201,8 @@ export default function HomePage() {
             ×
           </button>
         </div>
+
+        <TimeRangeFilter value={timeRangeKey} onChange={updateTimeRange} />
 
         {user && (
           <button

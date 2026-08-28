@@ -35,6 +35,7 @@ export default function Header() {
         Nano Crop News
       </Link>
       <nav className={styles.topNav}>
+        <Link href="/trends">Tendenze</Link>
         <Link href="/map">Mappa</Link>
         <Link href="/settings">Impostazioni</Link>
         {user ? (
