@@ -1,35 +1,8 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import type { User } from '@supabase/supabase-js'
 import type { Article } from '@/types'
-import { createClient } from '@/lib/supabase/client'
 import { estimateReadingMinutes, formatPublishedDate } from '@/lib/format'
 import styles from './ArticleCard.module.css'
 
 export default function ArticleCard({ article, badge }: { article: Article; badge?: string }) {
-  const [user, setUser] = useState<User | null>(null)
-  const supabase = createClient()
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  function markAsRead() {
-    if (!user) return
-
-    supabase
-      .from('user_reading_history')
-      .upsert(
-        { user_id: user.id, article_id: article.id, read_at: new Date().toISOString() },
-        { onConflict: 'user_id,article_id' },
-      )
-      .then(() => {
-        // Best-effort: non blocchiamo l'apertura dell'articolo se la chiamata fallisce.
-      })
-  }
-
   return (
     <article className={styles.card}>
       {article.image_url ? (
@@ -61,13 +34,7 @@ export default function ArticleCard({ article, badge }: { article: Article; badg
 
         <p className={styles.excerpt}>{article.summary_text || article.excerpt}</p>
 
-        <a
-          href={article.original_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.readOriginal}
-          onClick={markAsRead}
-        >
+        <a href={article.original_url} target="_blank" rel="noopener noreferrer" className={styles.readOriginal}>
           Leggi l&apos;originale →
         </a>
       </div>

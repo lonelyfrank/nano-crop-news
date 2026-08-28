@@ -8,8 +8,8 @@ Aggregatore di notizie personale, gratuito e open-source, ispirato a
 
 - Completamente gratuito, nessuna monetizzazione, nessun ricavo.
 - Costi di gestione quasi zero: priorità a free tier, RSS nativi, caching aggressivo.
-- Nessuna barriera di accesso: fruibile da tutti senza login obbligatorio.
-  Login opzionale, serve solo per persistere preferenze/cronologia.
+- Nessuna barriera di accesso: fruibile da tutti, nessun login (vedi
+  ["Account e login (sospesi per ora)"](#account-e-login-sospesi-per-ora)).
 - Solo excerpt brevi + link all'originale (mai contenuto completo), per
   restare nell'eccezione "very short extracts" del diritto connesso editori.
 - Nessuno scraping: qualunque classificazione (geografica, tematica) usa solo
@@ -18,31 +18,57 @@ Aggregatore di notizie personale, gratuito e open-source, ispirato a
 - Backend rule-based, deterministico e ispezionabile prima di qualsiasi
   introduzione di AI/ML.
 
+## Come funziona oggi
+
+L'app è interamente pubblica e anonima: nessun account, nessuna barriera.
+
+- **Home (`/`)** — feed cronologico di tutti gli articoli ingested. In cima,
+  una casella di ricerca full-text; nella sidebar (drawer su mobile), filtri
+  multi-selezione per fonte e tag più un filtro temporale (24h/3 giorni/
+  settimana/sempre). Scroll infinito.
+- **Tendenze (`/trends`)** — due sezioni: le "storie di tendenza" (la stessa
+  notizia ripresa da almeno 2 fonti diverse) e le "zone di tendenza" (regioni/
+  paesi con più articoli), entrambe filtrabili con lo stesso filtro temporale
+  della home. Cliccare una zona apre la mappa già centrata lì.
+- **Mappa (`/map`)** — mappa mondiale interattiva: click su un marker (o su
+  un punto qualsiasi) mostra le notizie geograficamente legate a quella zona.
+  Italia a livello regione/provincia, resto del mondo a livello paese.
+- **Menu "Aspetto"** (nell'header) — tema chiaro/scuro/automatico e densità
+  layout comoda/compatta, salvati nel browser (nessun account necessario).
+
+Dietro le quinte, un'ingestion schedulata legge feed RSS pubblici ogni 20
+minuti, li deduplica/raggruppa per storia, e li classifica geograficamente
+con regole deterministiche (nessuna AI, nessuno scraping oltre ai campi già
+presenti nel feed) — dettagli più sotto.
+
 ## Stack
 
 - **Frontend + API**: Next.js 16 (App Router, TypeScript, React 19), deploy su Vercel
-- **Database/Auth**: [Supabase](https://supabase.com) — Postgres managed con
-  `pgvector` abilitato fin da subito, Auth, RLS, API REST auto-generate (PostgREST)
+- **Database**: [Supabase](https://supabase.com) — Postgres managed con
+  `pgvector` abilitato fin da subito, RLS, API REST auto-generate (PostgREST).
+  Auth è configurata ma non esposta lato frontend, vedi sotto.
 - **Ingestion RSS**: script Node (`frontend/scripts/ingest`), schedulato da
   **GitHub Actions** (non Vercel Cron: sul piano Hobby/free gira al minimo
   una volta al giorno, non ogni 15-30 minuti)
 - **Cache**: [Upstash Redis](https://upstash.com) (free tier) per i feed grezzi
+  e le risposte della mappa
 
 ## Struttura del repository
 
 ```
 frontend/                Next.js — UI + script di ingestion, deploy su Vercel
-  app/                    Pagine (App Router): map, trends, api/map/*
-  components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header, MapView, TimeRangeFilter)
-  lib/supabase/           Client Supabase (browser/server/proxy — pattern @supabase/ssr)
+  app/                    Pagine (App Router): /, /trends, /map, api/map/*
+  components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header, MapView, TimeRangeFilter, AppearanceMenu, SkeletonCard)
+  lib/supabase/           Client Supabase per dati pubblici (browser + Route Handler)
   lib/geo-tagging/        Pipeline di geo-tagging rule-based (Macro Step 2), riusata anche dalla mappa
   lib/redis.ts            Cache Redis generica (ingestion + Route Handler mappa)
+  lib/format.ts           Formattazione data/tempo di lettura per le card
+  lib/appearance.ts       Preferenze tema/densità (localStorage)
   data/                   Dati statici: mapping fonte→regione, alias gazetteer
   scripts/ingest/         Script di ingestion RSS, eseguito da GitHub Actions
   scripts/backfill-*.ts   Backfill una tantum (geo-tagging, pulizia excerpt)
-  proxy.ts                Rinfresca la sessione Supabase su ogni richiesta
 supabase/
-  migrations/             Schema SQL, RLS, funzione RPC
+  migrations/             Schema SQL, RLS, funzioni RPC
   seed.sql                Fonti RSS, tag, regioni/province/paesi di esempio
 .github/workflows/        Scheduling dell'ingestion (cron GitHub Actions)
 ```
@@ -107,8 +133,7 @@ cd frontend
 npm run dev
 ```
 
-Apri `http://localhost:3000`. `/settings` richiede login (redirect
-automatico a `/login`, gestito da `proxy.ts`).
+Apri `http://localhost:3000`.
 
 ### 5. Deploy
 
@@ -178,11 +203,11 @@ dell'inserimento.
 
 ### Limite noto: assegnazione tag
 
-`tags`/`article_tag` esistono e sono usati dalla pagina impostazioni e da "i
-miei interessi", ma **nessuna logica automatica assegna i tag agli articoli
-ingested**. Sono seedati come lista di esempio ma vanno associati a mano
-finché non si aggiunge un classificatore dedicato. Il filtro sempre popolato
-dall'ingestion è quello per **fonte**.
+`tags`/`article_tag` esistono nello schema, ma **nessuna logica automatica
+assegna i tag agli articoli ingested**. Sono seedati come lista di esempio ma
+vanno associati a mano finché non si aggiunge un classificatore dedicato. Il
+filtro per tag in home può quindi non restituire risultati; quello sempre
+popolato dall'ingestion è il filtro per **fonte**.
 
 ### Pulizia excerpt (HTML/footer di sindacazione)
 
@@ -196,22 +221,19 @@ ripulito una tantum i 250 articoli già in DB che ne erano affetti.
 
 ## Frontend: layout e filtri
 
-- **Header** (`components/Header.tsx`, globale, minimale): logo, link
-  Impostazioni, email/logout o link login. Sticky in cima.
+- **Header** (`components/Header.tsx`, globale, minimale, sticky in cima):
+  logo, Tendenze, Mappa, menu Aspetto. Nessun elemento legato a un account
+  (vedi sezione dedicata più sotto).
 - **Home** (`app/page.tsx`): layout a due colonne, feed a sinistra e sidebar
-  filtri a destra (checkbox multi-selezione su fonti e tag, toggle "I miei
-  interessi"). Sotto i 768px la sidebar diventa un drawer a comparsa da
-  destra, aperto da un bottone "Filtri" sopra il feed — solo CSS (media
-  query + transizione) e uno state booleano, nessuna libreria UI.
-- I filtri della sidebar sono **manuali/di sessione** (non salvati): "I miei
-  interessi" usa invece le preferenze salvate in Impostazioni (RPC
-  `get_my_feed`), e per questo i filtri manuali vengono nascosti quando è attivo.
-- `components/CheckboxGroup.tsx` è condiviso tra la sidebar della home e la
-  pagina Impostazioni.
-- Autenticazione: pattern ufficiale `@supabase/ssr` per Next.js App Router
-  (`lib/supabase/client.ts` per i Client Component, `server.ts` per Server
-  Component/Route Handler, `proxy.ts` + `lib/supabase/middleware.ts` per il
-  refresh della sessione e la protezione di `/settings`).
+  filtri a destra (ricerca full-text, checkbox multi-selezione su fonti e
+  tag, filtro temporale). Sotto i 768px la sidebar diventa un drawer a
+  comparsa da destra, aperto da un bottone "Filtri" sopra il feed — solo CSS
+  (media query + transizione) e uno state booleano, nessuna libreria UI.
+- I filtri della sidebar sono **manuali/di sessione** (non salvati tra una
+  visita e l'altra).
+- `components/CheckboxGroup.tsx` gestisce la selezione multipla per
+  fonti/tag; `components/TimeRangeFilter.tsx` il filtro temporale, riusato
+  in modo indipendente da home/tendenze/mappa.
 
 ## Geo-tagging rule-based (Macro Step 2)
 
@@ -288,7 +310,7 @@ a livello paese.
   articoli per regione, solo quelle con almeno un articolo), cache Redis
   5 minuti (i dati cambiano solo ad ogni ingestion, ogni 20 min).
 - **`app/api/map/news?region={id}`**: RPC `get_articles_for_region()`, stesso
-  pattern jsonb annidato di `get_my_feed` (Step 1), stessa cache 5 minuti.
+  pattern jsonb annidato di `get_trending_clusters`, stessa cache 5 minuti.
 - **`app/api/map/geocode?lat=&lng=`**: reverse geocoding Nominatim **solo
   per interpretare il click su un'area libera** (mai per classificare gli
   articoli — quello resta il gazetteer rule-based dello Step 2). Coordinate
@@ -306,9 +328,8 @@ a livello paese.
   bundling), raggio/opacità proporzionali al numero di articoli. Tile
   CartoDB Positron/Dark Matter, seguono il tema attivo (automatico da
   `prefers-color-scheme`, oppure la scelta esplicita del menu "Aspetto" —
-  vedi Step 5a). Layout desktop a due
-  colonne (mappa + pannello risultati), sotto i 768px si impila verticalmente
-  — stesso breakpoint del resto del sito.
+  vedi Step 5a). Layout desktop a due colonne (mappa + pannello risultati),
+  sotto i 768px si impila verticalmente — stesso breakpoint del resto del sito.
 - **Non incluso**: 3.7 della spec originale (arricchimento con API geo
   esterne tipo NewsData.io/GNews come fallback) — la spec stessa lo marca
   "opzionale, per ultimo", e contraddice il principio "nessuna dipendenza
@@ -321,28 +342,27 @@ Nessuna nuova pipeline dati: solo aggregazioni su ciò che esiste già
 (`article_clusters` dello Step 1, `article_regions` dello Step 2,
 `published_at`), più un filtro temporale condiviso da feed/mappa/tendenze.
 
-- **`get_trending_clusters(p_from, p_to, p_limit)`** (nuova RPC): "storia di
-  tendenza" = cluster con **almeno 2 fonti distinte** nella finestra scelta,
-  ordinato per numero di fonti poi di articoli. Ritorna l'articolo più
-  recente del cluster (stesso pattern jsonb annidato di `get_my_feed`).
-- **`get_region_article_counts`, `get_articles_for_region`, `get_my_feed`**:
-  estese con `p_from`/`p_to` opzionali (default `null` = comportamento
-  identico a prima — la mappa continua a funzionare invariata quando non li
-  passa). Nota tecnica: cambiare la lista dei parametri di una funzione
-  Postgres richiede **droppare la vecchia firma esplicitamente** prima del
-  `create or replace`, altrimenti Postgres la tratta come un overload
-  distinto invece che sostituirla, e PostgREST fallisce con "funzione
-  ambigua" chiamandola con meno argomenti.
+- **`get_trending_clusters(p_from, p_to, p_limit)`**: "storia di tendenza" =
+  cluster con **almeno 2 fonti distinte** nella finestra scelta, ordinato per
+  numero di fonti poi di articoli. Ritorna l'articolo più recente del
+  cluster (jsonb annidato con source/tags già inclusi).
+- **`get_region_article_counts`, `get_articles_for_region`**: estese con
+  `p_from`/`p_to` opzionali (default `null` = nessun filtro). Nota tecnica:
+  cambiare la lista dei parametri di una funzione Postgres richiede
+  **droppare la vecchia firma esplicitamente** prima del `create or
+  replace`, altrimenti Postgres la tratta come un overload distinto invece
+  che sostituirla, e PostgREST fallisce con "funzione ambigua" chiamandola
+  con meno argomenti.
 - **`components/TimeRangeFilter.tsx`**: bottoni preset (Ultime 24h / Ultimi
   3 giorni / Ultima settimana / Sempre) invece di un vero slider
   trascinabile — stesso risultato funzionale (filtrare per intervallo),
   senza introdurre una libreria di slider. Riusato in `/`, `/map`, `/trends`
   in modo indipendente (nessuno stato condiviso tra pagine).
-- **`app/trends`** (nuova pagina "Tendenze", default "Ultimi 3 giorni"):
-  storie di tendenza (`ArticleCard` con la nuova prop opzionale `badge`, es.
-  "3 fonti") e zone di tendenza (lista classificata, ogni riga linka
-  `/map?region={id}` — `MapView` legge il parametro e seleziona
-  automaticamente quella zona al caricamento).
+- **`app/trends`** (default "Ultimi 3 giorni"): storie di tendenza
+  (`ArticleCard` con la prop opzionale `badge`, es. "3 fonti") e zone di
+  tendenza (lista classificata, ogni riga linka `/map?region={id}` —
+  `MapView` legge il parametro e seleziona automaticamente quella zona al
+  caricamento).
 - Sulla mappa, `from`/`to` sono passati a `/api/map/regions` e
   `/api/map/news`; **la chiave di cache Redis li include**, altrimenti
   richieste con range diversi si sovrascriverebbero a vicenda in cache.
@@ -352,18 +372,16 @@ Nessuna nuova pipeline dati: solo aggregazioni su ciò che esiste già
 Prima metà dello Step 5 "UX e interfaccia" della spec — la parte più
 contenuta (ricerca, card, dark mode/densità, skeleton). PWA offline e
 "salva per dopo"/cronologia restano per un giro successivo (Step 5b, vedi
-Roadmap): richiedono un service worker e/o una nuova tabella, paragonabili
+Roadmap): richiedono un service worker e/o login riattivato, paragonabili
 a uno step a sé.
 
 - **Ricerca full-text sul feed principale**: colonna generata
   `articles.search_vector` (`tsvector`, config `simple` — il feed è misto
   IT/EN, uno stemmer per una sola lingua penalizzerebbe l'altra) + indice
   GIN. Query diretta via `.textSearch()` di `supabase-js`
-  (`websearch_to_tsquery`, nessuna query testuale costruita a mano); RPC
-  `get_my_feed` estesa con `p_search` opzionale per restare coerente tra
-  feed pubblico e "I miei interessi". Si combina con i filtri
-  fonte/tag/tempo esistenti. Non estesa a Tendenze/Mappa: lì il filtro
-  naturale resta temporale/geografico.
+  (`websearch_to_tsquery`, nessuna query testuale costruita a mano). Si
+  combina con i filtri fonte/tag/tempo esistenti. Non estesa a
+  Tendenze/Mappa: lì il filtro naturale resta temporale/geografico.
 - **Card articolo**: nuova riga con data (relativa entro 48h via
   `Intl.RelativeTimeFormat`, assoluta oltre) e tempo di lettura stimato
   (`lib/format.ts`). La stima è dichiaratamente sull'anteprima disponibile,
@@ -382,13 +400,33 @@ a uno step a sé.
   al primo caricamento di feed e tendenze — l'infinite scroll resta col
   testo "Caricamento…" già presente, adeguato a fondo pagina.
 
+## Account e login (sospesi per ora)
+
+Login/registrazione e le funzionalità che ne dipendevano (pagina
+Impostazioni per le preferenze, "I miei interessi" nel feed, tracciamento
+della cronologia di lettura) sono state **rimosse dal frontend** per
+tornare a un'app interamente pubblica e anonima. È una scelta reversibile,
+non un'eliminazione dell'architettura:
+
+- **Schema, RLS e Supabase Auth restano intatti**: `profiles`,
+  `user_preferences`, `user_reading_history`, `user_questions` e le loro
+  policy RLS (ogni utente vede/modifica solo le proprie righe, via
+  `auth.uid()`) sono ancora nel database, **temporaneamente
+  irraggiungibili** perché il frontend non espone più nessuna pagina che
+  li usa.
+- Non è stata toccata nessuna migration: riattivare login/registrazione in
+  futuro non richiede modifiche allo schema, solo reintrodurre le pagine e
+  i componenti lato Next.js (recuperabili dalla history git — il commit che
+  li ha rimossi è puntuale e isolato dal resto).
+- La RPC `get_my_feed` (feed filtrato per le preferenze salvate) resta
+  definita nel database ma non più chiamata da nessuna pagina.
+
 ## Roadmap (Macro Step 5b-6, non ancora implementati)
 
 - **Step 5b — UX (parte restante)**: tre viste (Feed, Tendenze, Mappa) con
-  navigazione unificata (oggi sono link indipendenti nell'header), PWA
-  installabile con cache offline degli articoli già visti, "salva per
-  dopo" e cronologia persistente (nuova tabella, richiede login),
-  passaggio di accessibilità.
+  navigazione unificata, PWA installabile con cache offline degli articoli
+  già visti, "salva per dopo" e cronologia persistente (richiede
+  reintrodurre login — vedi sezione sopra), passaggio di accessibilità.
 - **Step 6 — Architettura/privacy**: rate limiting (Upstash), informativa
   privacy, documentazione dei limiti noti della pipeline di geo-tagging.
 
@@ -401,7 +439,8 @@ a uno step a sé.
   pgvector) è già presente; basta popolarla e usare l'operatore di distanza
   di pgvector (`<->`) nelle query.
 - **Q&A sugli articoli**: tabella `user_questions` già presente con RLS;
-  basta aggiungere una route/RPC dedicata quando si implementa la logica.
+  basta aggiungere una route/RPC dedicata quando si implementa la logica
+  (richiede login riattivo).
 - **Abbonamenti premium**: `profiles.is_premium` è già un campo boolean,
   pronto per una futura logica di pagamento (non implementata in questa fase).
 
@@ -413,4 +452,6 @@ Tutte le tabelle hanno Row Level Security abilitata:
   lo script di ingestion, con la service role key, scrive articoli e
   geo-tag).
 - `profiles`, `user_preferences`, `user_reading_history`, `user_questions`:
-  ogni utente vede/modifica solo le proprie righe (`auth.uid()`).
+  ogni utente vede/modifica solo le proprie righe (`auth.uid()`) — nel
+  frattempo irraggiungibili dal frontend, vedi
+  ["Account e login (sospesi per ora)"](#account-e-login-sospesi-per-ora).

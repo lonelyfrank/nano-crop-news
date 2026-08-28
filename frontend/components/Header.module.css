@@ -29,24 +29,6 @@
   color: inherit;
 }
 
-.userEmail {
-  color: var(--muted-text);
-  font-size: 0.85rem;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.linkButton {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-  color: inherit;
-}
-
 @media (max-width: 480px) {
   .topBar {
     padding: 0.75rem 1rem;
@@ -55,9 +37,5 @@
   .topNav {
     gap: 0.75rem;
     font-size: 0.9rem;
-  }
-
-  .userEmail {
-    display: none;
   }
 }

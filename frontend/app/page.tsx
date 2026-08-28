@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { User } from '@supabase/supabase-js'
 import ArticleCard from '@/components/ArticleCard'
 import CheckboxGroup from '@/components/CheckboxGroup'
 import SkeletonCard from '@/components/SkeletonCard'
@@ -15,7 +14,6 @@ const PAGE_SIZE = 20
 export default function HomePage() {
   const supabase = createClient()
 
-  const [user, setUser] = useState<User | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [sources, setSources] = useState<Source[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -23,7 +21,6 @@ export default function HomePage() {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
   const [timeRangeKey, setTimeRangeKey] = useState('all')
   const [searchInput, setSearchInput] = useState('')
-  const [onlyMine, setOnlyMine] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [pending, setPending] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -31,18 +28,12 @@ export default function HomePage() {
   const cursorRef = useRef<string | null>(null)
   const pendingRef = useRef(false)
   const hasMoreRef = useRef(true)
-  const onlyMineRef = useRef(false)
   const selectedSourceIdsRef = useRef<number[]>([])
   const selectedTagIdsRef = useRef<number[]>([])
   const timeRangeKeyRef = useRef('all')
   const searchRef = useRef('')
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   async function fetchMainFeedPage(): Promise<Article[]> {
     // "tags!inner" forza il join a restringere anche le righe di articles
@@ -84,27 +75,13 @@ export default function HomePage() {
     return (data ?? []) as unknown as Article[]
   }
 
-  async function fetchMyFeedPage(): Promise<Article[]> {
-    const { from, to } = rangeForPreset(timeRangeKeyRef.current)
-    const { data, error } = await supabase.rpc('get_my_feed', {
-      p_cursor: cursorRef.current,
-      p_limit: PAGE_SIZE,
-      p_from: from,
-      p_to: to,
-      p_search: searchRef.current || null,
-    })
-    if (error) throw error
-
-    return ((data ?? []) as { article: Article }[]).map((row) => row.article)
-  }
-
   async function loadPage() {
     if (pendingRef.current || !hasMoreRef.current) return
 
     pendingRef.current = true
     setPending(true)
     try {
-      const page = onlyMineRef.current ? await fetchMyFeedPage() : await fetchMainFeedPage()
+      const page = await fetchMainFeedPage()
 
       setArticles((prev) => [...prev, ...page])
       const more = page.length === PAGE_SIZE
@@ -125,13 +102,6 @@ export default function HomePage() {
     hasMoreRef.current = true
     setHasMore(true)
     loadPage()
-  }
-
-  function toggleMine() {
-    const next = !onlyMineRef.current
-    onlyMineRef.current = next
-    setOnlyMine(next)
-    resetAndReload()
   }
 
   function updateSourceIds(next: number[]) {
@@ -250,32 +220,14 @@ export default function HomePage() {
 
         <TimeRangeFilter value={timeRangeKey} onChange={updateTimeRange} />
 
-        {user && (
-          <button
-            className={`${styles.toggleMine} ${onlyMine ? styles.toggleMineActive : ''}`}
-            onClick={toggleMine}
-          >
-            I miei interessi
-          </button>
-        )}
-
-        {!onlyMine ? (
-          <>
-            <CheckboxGroup items={sources} value={selectedSourceIds} onChange={updateSourceIds} label="Fonti" />
-            <CheckboxGroup
-              items={tags}
-              value={selectedTagIds}
-              onChange={updateTagIds}
-              label="Tag"
-              hint="Nessun articolo ha ancora tag assegnati automaticamente: questo filtro può non restituire risultati."
-            />
-          </>
-        ) : (
-          <p className={styles.mineNote}>
-            I filtri manuali sono disattivi con &quot;I miei interessi&quot; attivo: qui vedi il feed basato
-            sulle fonti/tag salvati in Impostazioni.
-          </p>
-        )}
+        <CheckboxGroup items={sources} value={selectedSourceIds} onChange={updateSourceIds} label="Fonti" />
+        <CheckboxGroup
+          items={tags}
+          value={selectedTagIds}
+          onChange={updateTagIds}
+          label="Tag"
+          hint="Nessun articolo ha ancora tag assegnati automaticamente: questo filtro può non restituire risultati."
+        />
       </aside>
     </div>
   )

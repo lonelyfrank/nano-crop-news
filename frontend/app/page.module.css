@@ -50,30 +50,6 @@
   display: none;
 }
 
-.toggleMine {
-  display: block;
-  width: 100%;
-  margin-bottom: 1.25rem;
-  padding: 0.5rem 0.6rem;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: var(--card-bg);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.toggleMineActive {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
-}
-
-.mineNote {
-  font-size: 0.85rem;
-  color: var(--muted-text);
-  line-height: 1.4;
-}
-
 .backdrop {
   display: none;
 }
