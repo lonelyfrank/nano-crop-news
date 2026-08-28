@@ -74,11 +74,14 @@ function parseItem(item: any): FeedItem | null {
       return null
     }
 
-    const description = decodeEntities(textOf(item.description ?? item.summary ?? ''))
+    const descriptionHtml = decodeEntities(textOf(item.description ?? item.summary ?? ''))
     const author = decodeEntities(extractAuthor(item)) || null
-    const imageUrl = extractImage(item, description)
+    // L'estrazione immagine legge <img>/<enclosure> dalla versione HTML,
+    // quindi va fatta PRIMA di ripulire l'HTML dalla description.
+    const imageUrl = extractImage(item, descriptionHtml)
     const publishedAt = extractPublishedAt(item)
     const category = decodeEntities(extractCategory(item.category)) || null
+    const description = cleanDescription(descriptionHtml)
 
     return { title, link, description, author, imageUrl, publishedAt, category }
   } catch {
@@ -137,6 +140,20 @@ function extractCategory(value: unknown): string {
       .join(' | ')
   }
   return textOf(value ?? '')
+}
+
+/**
+ * Alcune fonti WordPress mettono markup HTML dentro <description> (<p>,
+ * <a href>, ...): un componente che lo renderizza come testo puro
+ * mostrerebbe i tag letterali. Qui si rimuovono i tag e, per i feed che
+ * aggiungono un paragrafo di attribuzione automatico in coda
+ * ("L'articolo X proviene da Y."), anche quello — non fa parte
+ * dell'excerpt reale dell'articolo.
+ */
+export function cleanDescription(html: string): string {
+  const withoutTags = html.replace(/<[^>]+>/g, ' ')
+  const withoutFooter = withoutTags.replace(/\s*L['’]articolo .+? proviene da .+?\.\s*$/i, '')
+  return withoutFooter.replace(/\s+/g, ' ').trim()
 }
 
 function textOf(value: unknown): string {

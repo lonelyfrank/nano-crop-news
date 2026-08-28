@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "ingest": "tsx scripts/ingest/index.ts",
-    "backfill-geo": "tsx scripts/backfill-geo-tagging.ts"
+    "backfill-geo": "tsx scripts/backfill-geo-tagging.ts",
+    "backfill-clean-excerpts": "tsx scripts/backfill-clean-excerpts.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

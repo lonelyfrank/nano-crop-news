@@ -183,16 +183,15 @@ ingested**. Sono seedati come lista di esempio ma vanno associati a mano
 finché non si aggiunge un classificatore dedicato. Il filtro sempre popolato
 dall'ingestion è quello per **fonte**.
 
-### Bug noto: HTML grezzo in alcuni excerpt
+### Pulizia excerpt (HTML/footer di sindacazione)
 
 Alcune fonti WordPress (es. Il Fatto Quotidiano) mettono markup HTML dentro
-`<description>` (`<p>`, `<a href="...">`). Il frontend lo mostra come testo
-letterale (`<p>...`) invece di renderizzarlo, perché `ArticleCard` inserisce
-`summary_text`/`excerpt` come testo puro in JSX (React lo esegue apposta,
-per sicurezza — l'alternativa sarebbe un sanitizer HTML, non ancora
-aggiunto). Da sistemare: o si ripulisce l'HTML in ingestion (strip dei tag,
-mantenendo solo testo), o si usa un sanitizer lato frontend prima di
-renderizzare come HTML. Non ancora corretto in questa sessione.
+`<description>` (`<p>`, `<a href="...">`) e un paragrafo di attribuzione
+automatico in coda ("L'articolo X proviene da Y."). `cleanDescription()` in
+`scripts/ingest/feed-parser.ts` rimuove entrambi prima di salvare
+excerpt/summary_text (l'estrazione immagine da `<img>` avviene comunque
+prima, sulla versione HTML). `scripts/backfill-clean-excerpts.ts` ha
+ripulito una tantum i 250 articoli già in DB che ne erano affetti.
 
 ## Frontend: layout e filtri
 
