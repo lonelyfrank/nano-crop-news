@@ -1,0 +1,44 @@
+.form {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.form form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.form input {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.form button {
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.error {
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.switch {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}

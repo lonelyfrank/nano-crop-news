@@ -1,0 +1,63 @@
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.topNav {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.topNav a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.userEmail {
+  color: var(--muted-text);
+  font-size: 0.85rem;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+@media (max-width: 480px) {
+  .topBar {
+    padding: 0.75rem 1rem;
+  }
+
+  .topNav {
+    gap: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .userEmail {
+    display: none;
+  }
+}

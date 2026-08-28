@@ -1,0 +1,22 @@
+.hint {
+  color: var(--muted-text);
+}
+
+.saveButton {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.savedMessage {
+  color: var(--muted-text);
+  margin-top: 0.5rem;
+}

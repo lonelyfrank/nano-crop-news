@@ -1,0 +1,128 @@
+.homeLayout {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.feedColumn {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobileFiltersBar {
+  display: none;
+  margin-bottom: 1rem;
+}
+
+.filtersToggle {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 4.5rem;
+  max-height: calc(100vh - 5.5rem);
+  overflow-y: auto;
+}
+
+.sidebarHeader {
+  display: none;
+}
+
+.toggleMine {
+  display: block;
+  width: 100%;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.toggleMineActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.mineNote {
+  font-size: 0.85rem;
+  color: var(--muted-text);
+  line-height: 1.4;
+}
+
+.backdrop {
+  display: none;
+}
+
+.loading {
+  text-align: center;
+  color: var(--muted-text);
+  padding: 1rem 0;
+}
+
+.sentinel {
+  height: 1px;
+}
+
+@media (max-width: 768px) {
+  .homeLayout {
+    flex-direction: column;
+  }
+
+  .mobileFiltersBar {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    height: 100vh;
+    width: min(320px, 85vw);
+    z-index: 40;
+    margin: 0;
+    padding: 1.25rem;
+    background: var(--card-bg);
+    box-shadow: -6px 0 20px rgba(0, 0, 0, 0.25);
+    transition: right 0.25s ease;
+    overflow-y: auto;
+  }
+
+  .sidebarOpen {
+    right: 0;
+  }
+
+  .sidebarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .sidebarClose {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 30;
+  }
+}

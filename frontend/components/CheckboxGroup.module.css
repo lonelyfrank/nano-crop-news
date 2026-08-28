@@ -1,0 +1,31 @@
+.group {
+  border: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.group legend {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+  padding: 0;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--muted-text);
+  margin: 0 0 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+}
+
+.empty {
+  font-size: 0.85rem;
+  color: var(--muted-text);
+}
