@@ -304,8 +304,9 @@ a livello paese.
   SSR). Marker `CircleMarker` (nessuna dipendenza da immagini icona, a
   differenza del `Marker` di default di Leaflet — evita un problema noto di
   bundling), raggio/opacità proporzionali al numero di articoli. Tile
-  CartoDB Positron/Dark Matter, switch automatico su `prefers-color-scheme`
-  (nessun toggle manuale: è nello scope dello Step 5). Layout desktop a due
+  CartoDB Positron/Dark Matter, seguono il tema attivo (automatico da
+  `prefers-color-scheme`, oppure la scelta esplicita del menu "Aspetto" —
+  vedi Step 5a). Layout desktop a due
   colonne (mappa + pannello risultati), sotto i 768px si impila verticalmente
   — stesso breakpoint del resto del sito.
 - **Non incluso**: 3.7 della spec originale (arricchimento con API geo
@@ -346,11 +347,48 @@ Nessuna nuova pipeline dati: solo aggregazioni su ciò che esiste già
   `/api/map/news`; **la chiave di cache Redis li include**, altrimenti
   richieste con range diversi si sovrascriverebbero a vicenda in cache.
 
-## Roadmap (Macro Step 5-6, non ancora implementati)
+## Ricerca, card, aspetto, skeleton loader (Macro Step 5a)
 
-- **Step 5 — UX**: tre viste (Feed, Tendenze, Mappa) con navigazione
-  unificata (oggi sono link indipendenti nell'header), ricerca full-text,
-  dark mode con toggle manuale, PWA, skeleton loader, "salva per dopo".
+Prima metà dello Step 5 "UX e interfaccia" della spec — la parte più
+contenuta (ricerca, card, dark mode/densità, skeleton). PWA offline e
+"salva per dopo"/cronologia restano per un giro successivo (Step 5b, vedi
+Roadmap): richiedono un service worker e/o una nuova tabella, paragonabili
+a uno step a sé.
+
+- **Ricerca full-text sul feed principale**: colonna generata
+  `articles.search_vector` (`tsvector`, config `simple` — il feed è misto
+  IT/EN, uno stemmer per una sola lingua penalizzerebbe l'altra) + indice
+  GIN. Query diretta via `.textSearch()` di `supabase-js`
+  (`websearch_to_tsquery`, nessuna query testuale costruita a mano); RPC
+  `get_my_feed` estesa con `p_search` opzionale per restare coerente tra
+  feed pubblico e "I miei interessi". Si combina con i filtri
+  fonte/tag/tempo esistenti. Non estesa a Tendenze/Mappa: lì il filtro
+  naturale resta temporale/geografico.
+- **Card articolo**: nuova riga con data (relativa entro 48h via
+  `Intl.RelativeTimeFormat`, assoluta oltre) e tempo di lettura stimato
+  (`lib/format.ts`). La stima è dichiaratamente sull'anteprima disponibile,
+  non sull'articolo completo — coerente col principio "solo excerpt,
+  niente scraping" — e lo dice esplicitamente in un tooltip.
+- **Dark mode con toggle manuale + densità layout**: menu "Aspetto"
+  nell'header (`components/AppearanceMenu.tsx`). Preferenza in
+  `localStorage` (`lib/appearance.ts`), applicata via attributi
+  `data-theme`/`data-density` su `<html>`, scritti **prima
+  dell'idratazione** da uno script inline in `app/layout.tsx` (evita un
+  flash del tema/spaziatura sbagliati al reload). Se l'utente non sceglie
+  esplicitamente, il tema resta automatico da `prefers-color-scheme`
+  (comportamento invariato) — il toggle *sovrascrive*, non sostituisce.
+- **Skeleton loader**: `components/SkeletonCard.tsx` riusa la stessa
+  struttura (immagine + blocchi di testo) di `ArticleCard`, mostrato solo
+  al primo caricamento di feed e tendenze — l'infinite scroll resta col
+  testo "Caricamento…" già presente, adeguato a fondo pagina.
+
+## Roadmap (Macro Step 5b-6, non ancora implementati)
+
+- **Step 5b — UX (parte restante)**: tre viste (Feed, Tendenze, Mappa) con
+  navigazione unificata (oggi sono link indipendenti nell'header), PWA
+  installabile con cache offline degli articoli già visti, "salva per
+  dopo" e cronologia persistente (nuova tabella, richiede login),
+  passaggio di accessibilità.
 - **Step 6 — Architettura/privacy**: rate limiting (Upstash), informativa
   privacy, documentazione dei limiti noti della pipeline di geo-tagging.
 

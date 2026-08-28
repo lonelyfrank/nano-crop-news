@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import type { Article } from '@/types'
 import { createClient } from '@/lib/supabase/client'
+import { estimateReadingMinutes, formatPublishedDate } from '@/lib/format'
 import styles from './ArticleCard.module.css'
 
 export default function ArticleCard({ article, badge }: { article: Article; badge?: string }) {
@@ -49,6 +50,15 @@ export default function ArticleCard({ article, badge }: { article: Article; badg
         </div>
 
         <h2 className={styles.title}>{article.title}</h2>
+
+        <p className={styles.meta}>
+          {formatPublishedDate(article.published_at)}
+          <span className={styles.metaSeparator}>·</span>
+          <span title="Stima basata sull'anteprima, non sull'articolo completo">
+            {estimateReadingMinutes(article.summary_text || article.excerpt)} min di lettura
+          </span>
+        </p>
+
         <p className={styles.excerpt}>{article.summary_text || article.excerpt}</p>
 
         <a

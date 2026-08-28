@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import AppearanceMenu from './AppearanceMenu'
 import styles from './Header.module.css'
 
 export default function Header() {
@@ -38,6 +39,7 @@ export default function Header() {
         <Link href="/trends">Tendenze</Link>
         <Link href="/map">Mappa</Link>
         <Link href="/settings">Impostazioni</Link>
+        <AppearanceMenu />
         {user ? (
           <>
             <span className={styles.userEmail}>{user.email}</span>

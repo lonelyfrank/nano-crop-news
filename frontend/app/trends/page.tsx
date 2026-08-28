@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ArticleCard from '@/components/ArticleCard'
+import SkeletonCard from '@/components/SkeletonCard'
 import TimeRangeFilter, { rangeForPreset } from '@/components/TimeRangeFilter'
 import { createClient } from '@/lib/supabase/client'
 import type { Article } from '@/types'
@@ -56,7 +57,13 @@ export default function TrendsPage() {
       <section className={styles.section}>
         <h2>Storie di tendenza</h2>
         <p className={styles.hint}>Notizie riprese da più fonti diverse nell&apos;intervallo scelto.</p>
-        {clusters === null && <p className={styles.hint}>Caricamento…</p>}
+        {clusters === null && (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        )}
         {clusters?.length === 0 && (
           <p className={styles.hint}>Nessuna storia multi-fonte in questo intervallo.</p>
         )}

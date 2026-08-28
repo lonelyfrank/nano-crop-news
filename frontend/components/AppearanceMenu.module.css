@@ -1,0 +1,69 @@
+.wrapper {
+  position: relative;
+}
+
+.trigger {
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 30;
+  width: 220px;
+  padding: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.group {
+  margin-bottom: 0.75rem;
+}
+
+.group:last-child {
+  margin-bottom: 0;
+}
+
+.groupLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted-text);
+  margin-bottom: 0.35rem;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.option {
+  flex: 1;
+  padding: 0.35rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.optionActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}

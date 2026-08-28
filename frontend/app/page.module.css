@@ -9,6 +9,20 @@
   min-width: 0;
 }
 
+.searchBar {
+  margin-bottom: 1rem;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
 .mobileFiltersBar {
   display: none;
   margin-bottom: 1rem;

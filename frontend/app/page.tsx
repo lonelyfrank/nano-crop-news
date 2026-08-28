@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import ArticleCard from '@/components/ArticleCard'
 import CheckboxGroup from '@/components/CheckboxGroup'
+import SkeletonCard from '@/components/SkeletonCard'
 import TimeRangeFilter, { rangeForPreset } from '@/components/TimeRangeFilter'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, Source, Tag } from '@/types'
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
   const [timeRangeKey, setTimeRangeKey] = useState('all')
+  const [searchInput, setSearchInput] = useState('')
   const [onlyMine, setOnlyMine] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [pending, setPending] = useState(false)
@@ -33,6 +35,8 @@ export default function HomePage() {
   const selectedSourceIdsRef = useRef<number[]>([])
   const selectedTagIdsRef = useRef<number[]>([])
   const timeRangeKeyRef = useRef('all')
+  const searchRef = useRef('')
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -45,10 +49,15 @@ export default function HomePage() {
     // quando si filtra per tag (con "tags" semplice, PostgREST filtra solo
     // l'array annidato, non le righe genitore).
     const tagsEmbed = selectedTagIdsRef.current.length ? 'tags!inner(id, name)' : 'tags(id, name)'
+    // Colonne esplicite invece di "*": esclude search_vector (colonna
+    // generata dello Step 5a), che non serve al client e non è pensata per
+    // essere serializzata come testo nel payload.
+    const articleColumns =
+      'id, title, original_url, excerpt, summary_type, summary_text, author, image_url, published_at, cluster_id'
 
     let query = supabase
       .from('articles')
-      .select(`*, source:sources(*), ${tagsEmbed}`)
+      .select(`${articleColumns}, source:sources(*), ${tagsEmbed}`)
       .order('published_at', { ascending: false })
       .limit(PAGE_SIZE)
 
@@ -60,6 +69,9 @@ export default function HomePage() {
     }
     if (cursorRef.current) {
       query = query.lt('published_at', cursorRef.current)
+    }
+    if (searchRef.current) {
+      query = query.textSearch('search_vector', searchRef.current, { type: 'websearch', config: 'simple' })
     }
 
     const { from, to } = rangeForPreset(timeRangeKeyRef.current)
@@ -79,6 +91,7 @@ export default function HomePage() {
       p_limit: PAGE_SIZE,
       p_from: from,
       p_to: to,
+      p_search: searchRef.current || null,
     })
     if (error) throw error
 
@@ -139,6 +152,15 @@ export default function HomePage() {
     resetAndReload()
   }
 
+  function updateSearch(value: string) {
+    setSearchInput(value)
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => {
+      searchRef.current = value.trim()
+      resetAndReload()
+    }, 400)
+  }
+
   useEffect(() => {
     async function init() {
       const [sourcesResponse, tagsResponse] = await Promise.all([
@@ -166,14 +188,38 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    }
+  }, [])
+
   return (
     <div className={styles.homeLayout}>
       <div className={styles.feedColumn}>
+        <div className={styles.searchBar}>
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder="Cerca negli articoli…"
+            value={searchInput}
+            onChange={(e) => updateSearch(e.target.value)}
+          />
+        </div>
+
         <div className={styles.mobileFiltersBar}>
           <button className={styles.filtersToggle} onClick={() => setShowFilters(true)}>
             Filtri
           </button>
         </div>
+
+        {!articles.length && pending && (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        )}
 
         {!articles.length && !pending && <p>Nessun articolo trovato.</p>}
 
@@ -182,7 +228,7 @@ export default function HomePage() {
         ))}
 
         <div ref={sentinelRef} className={styles.sentinel} />
-        {pending && <p className={styles.loading}>Caricamento…</p>}
+        {pending && articles.length > 0 && <p className={styles.loading}>Caricamento…</p>}
         {!hasMore && articles.length > 0 && !pending && (
           <p className={styles.loading}>Non ci sono altri articoli.</p>
         )}
