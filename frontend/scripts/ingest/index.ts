@@ -6,6 +6,7 @@ import { RssExcerptSummaryGenerator, type SummaryGenerator } from './summary'
 import { normalizeUrl } from './normalize-url'
 import { getCachedFeed, setCachedFeed } from './redis-cache'
 import { retryWithBackoff } from './retry'
+import { loadGeoTaggingContext, resolveRegionsForArticle } from '@/lib/geo-tagging'
 
 // Per abilitare in futuro i riassunti generati via AI, sostituisci questa
 // riga con `new AiSummaryGenerator()` (dopo averne implementato la logica in
@@ -61,6 +62,17 @@ async function main() {
     .limit(CANDIDATE_POOL_LIMIT)
 
   const candidatePool: ClusterCandidate[] = initialPool ?? []
+  const geoContext = await loadGeoTaggingContext(supabase)
+
+  // Accumulate le righe di article_regions di tutte le fonti per un unico
+  // insert batch a fine esecuzione, non uno per articolo (stessa disciplina
+  // già applicata a dedup/insert articoli e clustering).
+  const articleRegionRows: {
+    article_id: number
+    region_id: number
+    source_type: string
+    confidence: number
+  }[] = []
 
   let totalCreated = 0
   const report: Record<string, string> = {}
@@ -110,7 +122,7 @@ async function main() {
             rss_category: item.category,
           })),
         )
-        .select('id, title, source_id')
+        .select('id, title, source_id, original_url, excerpt, rss_category')
 
       if (insertError || !inserted) {
         report[source.name] = `errore insert: ${insertError?.message ?? 'sconosciuto'}`
@@ -132,6 +144,28 @@ async function main() {
           source_id: article.source_id,
           cluster_id: clusterId,
         })
+
+        const regionMatches = resolveRegionsForArticle(
+          {
+            id: article.id,
+            title: article.title,
+            excerpt: article.excerpt ?? '',
+            originalUrl: article.original_url,
+            rssCategory: article.rss_category,
+            sourceId: article.source_id,
+            sourceName: source.name,
+          },
+          geoContext,
+        )
+
+        for (const match of regionMatches) {
+          articleRegionRows.push({
+            article_id: article.id,
+            region_id: match.regionId,
+            source_type: match.sourceType,
+            confidence: match.confidence,
+          })
+        }
       }
 
       totalCreated += inserted.length
@@ -142,7 +176,14 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({ created: totalCreated, report }, null, 2))
+  let regionRowsInserted = 0
+  for (let i = 0; i < articleRegionRows.length; i += 500) {
+    const chunk = articleRegionRows.slice(i, i + 500)
+    const { error } = await supabase.from('article_regions').insert(chunk)
+    if (!error) regionRowsInserted += chunk.length
+  }
+
+  console.log(JSON.stringify({ created: totalCreated, regionRowsInserted, report }, null, 2))
 }
 
 async function getOrFetchFeedBody(rssUrl: string): Promise<string> {

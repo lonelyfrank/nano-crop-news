@@ -2,7 +2,7 @@
 
 Aggregatore di notizie personale, gratuito e open-source, ispirato a
 [Column.news](https://column.news). Live su
-[nano-crop-news.vercel.app](https://nano-crop-news.vercel.app/).
+[lonelyfrank-nano-crop-news.vercel.app](https://lonelyfrank-nano-crop-news.vercel.app/).
 
 ## Principi guida
 
@@ -35,11 +35,14 @@ frontend/                Next.js — UI + script di ingestion, deploy su Vercel
   app/                    Pagine (App Router)
   components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header)
   lib/supabase/           Client Supabase (browser/server/proxy — pattern @supabase/ssr)
+  lib/geo-tagging/        Pipeline di geo-tagging rule-based (Macro Step 2)
+  data/                   Dati statici: mapping fonte→regione, alias gazetteer
   scripts/ingest/         Script di ingestion RSS, eseguito da GitHub Actions
+  scripts/backfill-geo-tagging.ts  Backfill una tantum del geo-tagging
   proxy.ts                Rinfresca la sessione Supabase su ogni richiesta
 supabase/
   migrations/             Schema SQL, RLS, funzione RPC
-  seed.sql                Fonti RSS + tag di esempio
+  seed.sql                Fonti RSS, tag, regioni/province/paesi di esempio
 .github/workflows/        Scheduling dell'ingestion (cron GitHub Actions)
 ```
 
@@ -180,6 +183,17 @@ ingested**. Sono seedati come lista di esempio ma vanno associati a mano
 finché non si aggiunge un classificatore dedicato. Il filtro sempre popolato
 dall'ingestion è quello per **fonte**.
 
+### Bug noto: HTML grezzo in alcuni excerpt
+
+Alcune fonti WordPress (es. Il Fatto Quotidiano) mettono markup HTML dentro
+`<description>` (`<p>`, `<a href="...">`). Il frontend lo mostra come testo
+letterale (`<p>...`) invece di renderizzarlo, perché `ArticleCard` inserisce
+`summary_text`/`excerpt` come testo puro in JSX (React lo esegue apposta,
+per sicurezza — l'alternativa sarebbe un sanitizer HTML, non ancora
+aggiunto). Da sistemare: o si ripulisce l'HTML in ingestion (strip dei tag,
+mantenendo solo testo), o si usa un sanitizer lato frontend prima di
+renderizzare come HTML. Non ancora corretto in questa sessione.
+
 ## Frontend: layout e filtri
 
 - **Header** (`components/Header.tsx`, globale, minimale): logo, link
@@ -199,21 +213,75 @@ dall'ingestion è quello per **fonte**.
   Component/Route Handler, `proxy.ts` + `lib/supabase/middleware.ts` per il
   refresh della sessione e la protezione di `/settings`).
 
-## Roadmap (Macro Step 2-6, non ancora implementati)
+## Geo-tagging rule-based (Macro Step 2)
 
-Pianificati ma non costruiti in questo giro — si parte da qui dopo aver
-verificato lo Step 1 in produzione:
+Ogni articolo viene classificato geograficamente — "di cosa/dove parla", non
+"da dove è pubblicato" — usando solo dati già presenti nell'item RSS
+(titolo, excerpt, URL, categoria), senza scraping né AI. Un articolo può
+riguardare più zone: 486 dei 1218 articoli in DB al momento della scrittura
+ne hanno più di una.
 
-- **Step 2 — Geo-tagging rule-based**: tabelle `regions` e `article_regions`
-  (molti-a-molti, con `source_type` e `confidence` per misurare l'affidabilità
-  di ogni tecnica), modulo isolato `lib/geo-tagging/` con 4 tecniche (source
-  default, URL pattern, RSS category — usa `articles.rss_category` già
-  raccolto dallo Step 1 —, gazetteer), eseguite una volta per articolo
-  all'ingestion.
-- **Step 3 — Mappa interattiva**: dataset statico geografico,
-  `/api/map/regions` e `/api/map/news`, `react-leaflet` con tile CartoDB,
-  Nominatim solo per il click su area libera (mai per gli articoli), cache
-  Redis dei risultati.
+### Schema
+
+`regions` (paesi/macro-regioni/regioni/province italiane, con `parent_id`
+per la gerarchia) e `article_regions`, pivot molti-a-molti con
+`source_type` e `confidence` — tracciati **per misurare quanto funziona bene
+ogni tecnica sui dati reali**, non solo per completezza. Lo unique è su
+`(article_id, region_id, source_type)`, non solo `(article_id, region_id)`:
+se due tecniche diverse trovano indipendentemente la stessa regione,
+restano due righe distinte — è il segnale utile, non rumore da deduplicare.
+
+### Le 4 tecniche (`frontend/lib/geo-tagging/`)
+
+Una funzione pura per tecnica, nessun accesso DB al loro interno (i dati
+sono caricati una volta per esecuzione, stessa disciplina di scalabilità
+già adottata nel resto dell'ingestion):
+
+1. **`source-default.ts`** (confidence 0.3): mapping statico fonte→regione
+   di default da `data/sources-geo.json`. Applicato sempre — è la base
+   minima, ma è un segnale debole (dice dove è pubblicato, non di cosa parla).
+2. **`url-pattern.ts`** (confidence 0.6): regex sul path dell'URL, per fonte.
+   **Copertura reale solo su ANSA** (`/mondo/europa/`, `/mondo/americalatina/`,
+   ...) — verificato ispezionando gli URL reali delle 19 fonti: BBC usa ID
+   opachi nel path, Il Post/Il Fatto/TechCrunch/The Verge usano slug basati
+   sul titolo, nessuna geografia strutturata. Non è un pattern dimenticato
+   per queste fonti, è la realtà dei dati.
+3. **`rss-category.ts`** (confidence 0.55): divide `rss_category` (già
+   raccolto dallo Step 1) sui suoi tag e li confronta con l'indice del
+   gazetteer. **Copertura reale solo su Il Fatto Quotidiano** (unica fonte
+   con `<category>` valorizzata nel feed, 129/1218 articoli).
+4. **`gazetteer.ts`** (confidence 0.65): scansiona titolo+excerpt con regex
+   a confine di parola contro un indice costruito dai nomi delle regioni
+   (caricate dal DB) + le alias extra curate in `data/gazetteer.json` (es.
+   "Stati Uniti" → anche "USA", "America"). **La tecnica con la copertura
+   più ampia e uniforme** su tutte le fonti (644 match su 1218 articoli).
+   Limite noto: nomi corti/ambigui (es. "Chad" paese vs nome proprio) possono
+   dare falsi positivi — accettabile per un MVP rule-based, motivo stesso
+   per cui si traccia `confidence` invece di considerare ogni match certo.
+
+`resolveRegionsForArticle()` (`lib/geo-tagging/index.ts`) orchestra le 4
+tecniche per un articolo; l'ingestion (`scripts/ingest/index.ts`) lo chiama
+per ogni nuovo articolo e fa un insert batch su `article_regions` a fine
+esecuzione (non uno per articolo). `scripts/backfill-geo-tagging.ts` applica
+la stessa pipeline agli articoli già esistenti (eseguito una tantum dopo il
+deploy della migration, non schedulato: `npm run backfill-geo`).
+
+### Dati di riferimento
+
+20 regioni italiane (complete), ~50 città/province italiane più citate nelle
+notizie (non le 107 province formali — molte non compaiono mai per nome
+nelle notizie), ~130 paesi del mondo più rilevanti per le notizie
+internazionali (non tutti i ~195 stati membri ONU). `lat`/`lng` sono
+centroidi approssimativi (capoluogo/capitale), pensati per un click-area
+sulla mappa dello Step 3, non per precisione cartografica. L'elenco è
+estendibile aggiungendo righe al seed (idempotente).
+
+## Roadmap (Macro Step 3-6, non ancora implementati)
+
+- **Step 3 — Mappa interattiva**: `regions` (con `lat`/`lng`) è già popolata
+  dallo Step 2, riusabile così com'è; restano da fare `/api/map/regions` e
+  `/api/map/news`, `react-leaflet` con tile CartoDB, Nominatim solo per il
+  click su area libera (mai per gli articoli), cache Redis dei risultati.
 - **Step 4 — Tendenze/timeline**: aggregazioni su `article_regions` e sui
   cluster di duplicati (già esistenti, `article_clusters`), filtri `?from=&to=`.
 - **Step 5 — UX**: tre viste (Feed, Tendenze, Mappa), ricerca full-text, dark
@@ -237,8 +305,9 @@ verificato lo Step 1 in produzione:
 ## Sicurezza: RLS
 
 Tutte le tabelle hanno Row Level Security abilitata:
-- `sources`, `articles`, `tags`, `article_tag`: lettura pubblica (anon +
-  authenticated), nessuna scrittura da client (solo lo script di ingestion,
-  con la service role key, scrive articoli).
+- `sources`, `articles`, `tags`, `article_tag`, `regions`, `article_regions`:
+  lettura pubblica (anon + authenticated), nessuna scrittura da client (solo
+  lo script di ingestion, con la service role key, scrive articoli e
+  geo-tag).
 - `profiles`, `user_preferences`, `user_reading_history`, `user_questions`:
   ogni utente vede/modifica solo le proprie righe (`auth.uid()`).

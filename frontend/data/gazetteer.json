@@ -1,0 +1,14 @@
+{
+  "Stati Uniti": ["USA", "America", "Stati Uniti d'America", "U.S.", "US"],
+  "Regno Unito": ["UK", "Inghilterra", "Gran Bretagna"],
+  "Paesi Bassi": ["Olanda"],
+  "Emirati Arabi Uniti": ["Emirati"],
+  "Corea del Sud": ["Sud Corea", "South Korea"],
+  "Corea del Nord": ["Nord Corea", "North Korea"],
+  "Repubblica Ceca": ["Cechia"],
+  "Bosnia ed Erzegovina": ["Bosnia"],
+  "Macedonia del Nord": ["Macedonia"],
+  "Trentino-Alto Adige": ["Alto Adige", "Trentino", "Südtirol", "Sudtirolo"],
+  "Repubblica Democratica del Congo": ["Congo Kinshasa", "RDC"],
+  "Vaticano": ["Città del Vaticano", "Santa Sede"]
+}

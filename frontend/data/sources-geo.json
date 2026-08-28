@@ -1,0 +1,21 @@
+{
+  "Il Post": { "region": "Italia", "level": "country" },
+  "ANSA - Homepage": { "region": "Italia", "level": "country" },
+  "Il Fatto Quotidiano": { "region": "Italia", "level": "country" },
+  "Wired Italia": { "region": "Italia", "level": "country" },
+  "BBC News": { "region": "Regno Unito", "level": "country" },
+  "TechCrunch": { "region": "Stati Uniti", "level": "country" },
+  "The Verge": { "region": "Stati Uniti", "level": "country" },
+  "ANSA - Politica": { "region": "Italia", "level": "country" },
+  "ANSA - Economia": { "region": "Italia", "level": "country" },
+  "ANSA - Sport": { "region": "Italia", "level": "country" },
+  "ANSA - Cultura": { "region": "Italia", "level": "country" },
+  "ANSA - Mondo": { "region": "Italia", "level": "country" },
+  "Rai News - Esteri": { "region": "Italia", "level": "country" },
+  "Rai News - Sport": { "region": "Italia", "level": "country" },
+  "BBC World": { "region": "Regno Unito", "level": "country" },
+  "BBC Business": { "region": "Regno Unito", "level": "country" },
+  "BBC Technology": { "region": "Regno Unito", "level": "country" },
+  "BBC Sport": { "region": "Regno Unito", "level": "country" },
+  "BBC Science": { "region": "Regno Unito", "level": "country" }
+}
