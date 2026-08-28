@@ -32,13 +32,14 @@ Aggregatore di notizie personale, gratuito e open-source, ispirato a
 
 ```
 frontend/                Next.js — UI + script di ingestion, deploy su Vercel
-  app/                    Pagine (App Router)
-  components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header)
+  app/                    Pagine (App Router), incluso app/map e app/api/map/*
+  components/             Componenti condivisi (ArticleCard, CheckboxGroup, Header, MapView)
   lib/supabase/           Client Supabase (browser/server/proxy — pattern @supabase/ssr)
-  lib/geo-tagging/        Pipeline di geo-tagging rule-based (Macro Step 2)
+  lib/geo-tagging/        Pipeline di geo-tagging rule-based (Macro Step 2), riusata anche dalla mappa
+  lib/redis.ts            Cache Redis generica (ingestion + Route Handler mappa)
   data/                   Dati statici: mapping fonte→regione, alias gazetteer
   scripts/ingest/         Script di ingestion RSS, eseguito da GitHub Actions
-  scripts/backfill-geo-tagging.ts  Backfill una tantum del geo-tagging
+  scripts/backfill-*.ts   Backfill una tantum (geo-tagging, pulizia excerpt)
   proxy.ts                Rinfresca la sessione Supabase su ogni richiesta
 supabase/
   migrations/             Schema SQL, RLS, funzione RPC
@@ -275,12 +276,46 @@ centroidi approssimativi (capoluogo/capitale), pensati per un click-area
 sulla mappa dello Step 3, non per precisione cartografica. L'elenco è
 estendibile aggiungendo righe al seed (idempotente).
 
-## Roadmap (Macro Step 3-6, non ancora implementati)
+## Mappa interattiva (Macro Step 3)
 
-- **Step 3 — Mappa interattiva**: `regions` (con `lat`/`lng`) è già popolata
-  dallo Step 2, riusabile così com'è; restano da fare `/api/map/regions` e
-  `/api/map/news`, `react-leaflet` con tile CartoDB, Nominatim solo per il
-  click su area libera (mai per gli articoli), cache Redis dei risultati.
+`/map`: click su un marker (o su un'area libera) mostra le notizie locali di
+quella zona. Scope mondiale con la granularità della spec: Italia a livello
+regione/provincia (il marker "Italia" a livello paese è escluso apposta, le
+notizie italiane compaiono già sulle sue regioni/province), resto del mondo
+a livello paese.
+
+- **`app/api/map/regions`**: RPC `get_region_article_counts()` (conteggio
+  articoli per regione, solo quelle con almeno un articolo), cache Redis
+  5 minuti (i dati cambiano solo ad ogni ingestion, ogni 20 min).
+- **`app/api/map/news?region={id}`**: RPC `get_articles_for_region()`, stesso
+  pattern jsonb annidato di `get_my_feed` (Step 1), stessa cache 5 minuti.
+- **`app/api/map/geocode?lat=&lng=`**: reverse geocoding Nominatim **solo
+  per interpretare il click su un'area libera** (mai per classificare gli
+  articoli — quello resta il gazetteer rule-based dello Step 2). Coordinate
+  arrotondate a 2 decimali, cache Redis **30 giorni**. Risolve un `region_id`
+  **riusando il matcher del gazetteer dello Step 2**
+  (`lib/geo-tagging/gazetteer.ts`) sui campi città/provincia/regione/paese
+  restituiti da Nominatim, dal più specifico al meno specifico — nessuna
+  logica di matching duplicata. Se non trova corrispondenza ritorna
+  `regionId: null`: il frontend mostra "nessuna notizia locale per
+  quest'area", non un errore.
+- **`components/MapView.tsx`**: `react-leaflet`, caricato con
+  `next/dynamic({ ssr: false })` (Leaflet richiede `window`, non supporta
+  SSR). Marker `CircleMarker` (nessuna dipendenza da immagini icona, a
+  differenza del `Marker` di default di Leaflet — evita un problema noto di
+  bundling), raggio/opacità proporzionali al numero di articoli. Tile
+  CartoDB Positron/Dark Matter, switch automatico su `prefers-color-scheme`
+  (nessun toggle manuale: è nello scope dello Step 5). Layout desktop a due
+  colonne (mappa + pannello risultati), sotto i 768px si impila verticalmente
+  — stesso breakpoint del resto del sito.
+- **Non incluso**: 3.7 della spec originale (arricchimento con API geo
+  esterne tipo NewsData.io/GNews come fallback) — la spec stessa lo marca
+  "opzionale, per ultimo", e contraddice il principio "nessuna dipendenza
+  critica da API esterne a pagamento o con free tier limitato". Da valutare
+  solo se emerge un bisogno reale.
+
+## Roadmap (Macro Step 4-6, non ancora implementati)
+
 - **Step 4 — Tendenze/timeline**: aggregazioni su `article_regions` e sui
   cluster di duplicati (già esistenti, `article_clusters`), filtri `?from=&to=`.
 - **Step 5 — UX**: tre viste (Feed, Tendenze, Mappa), ricerca full-text, dark
