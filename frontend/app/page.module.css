@@ -1,3 +1,15 @@
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 1rem;
+  }
+}
+
 .homeLayout {
   display: flex;
   align-items: flex-start;
@@ -10,7 +22,7 @@
 }
 
 .searchBar {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .searchInput {
@@ -23,13 +35,58 @@
   font-size: 0.95rem;
 }
 
-.mobileFiltersBar {
-  display: none;
-  margin-bottom: 1rem;
+.controlsBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .filtersToggle {
+  display: none;
+  flex-shrink: 0;
   padding: 0.5rem 1rem;
+  min-height: 44px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sourceChips {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.chip {
+  flex-shrink: 0;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--chip-bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.emptyState {
+  color: var(--muted-text);
+  padding: 1rem 0;
+}
+
+.resetButton {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.9rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--card-bg);
@@ -38,8 +95,10 @@
 }
 
 .sidebar {
-  width: 260px;
+  width: 280px;
   flex-shrink: 0;
+  border-left: 1px solid var(--border-color);
+  padding-left: 1.5rem;
   position: sticky;
   top: 4.5rem;
   max-height: calc(100vh - 5.5rem);
@@ -69,8 +128,12 @@
     flex-direction: column;
   }
 
-  .mobileFiltersBar {
+  .filtersToggle {
     display: block;
+  }
+
+  .sourceChips {
+    display: none;
   }
 
   .sidebar {
@@ -81,6 +144,7 @@
     width: min(320px, 85vw);
     z-index: 40;
     margin: 0;
+    border-left: none;
     padding: 1.25rem;
     background: var(--card-bg);
     box-shadow: -6px 0 20px rgba(0, 0, 0, 0.25);

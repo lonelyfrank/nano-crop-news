@@ -3,6 +3,8 @@
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 0.6rem;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -12,30 +14,19 @@
 }
 
 .brand {
+  order: 1;
   font-weight: 700;
   font-size: 1.1rem;
   text-decoration: none;
   color: inherit;
 }
 
-.topNav {
-  display: flex;
-  gap: 1.25rem;
-  align-items: center;
-}
-
-.topNav a {
-  text-decoration: none;
-  color: inherit;
+.appearanceSlot {
+  order: 2;
 }
 
 @media (max-width: 480px) {
   .topBar {
     padding: 0.75rem 1rem;
-  }
-
-  .topNav {
-    gap: 0.75rem;
-    font-size: 0.9rem;
   }
 }

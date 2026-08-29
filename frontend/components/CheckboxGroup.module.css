@@ -25,6 +25,10 @@
   font-size: 0.9rem;
 }
 
+.rowDisabled {
+  color: var(--muted-text);
+}
+
 .empty {
   font-size: 0.85rem;
   color: var(--muted-text);

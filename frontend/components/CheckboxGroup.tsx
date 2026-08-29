@@ -11,9 +11,10 @@ interface Props {
   onChange: (next: number[]) => void
   label?: string
   hint?: string
+  disabled?: boolean
 }
 
-export default function CheckboxGroup({ items, value, onChange, label, hint }: Props) {
+export default function CheckboxGroup({ items, value, onChange, label, hint, disabled }: Props) {
   function toggle(id: number) {
     const next = value.includes(id) ? value.filter((existing) => existing !== id) : [...value, id]
     onChange(next)
@@ -24,8 +25,13 @@ export default function CheckboxGroup({ items, value, onChange, label, hint }: P
       {label && <legend>{label}</legend>}
       {hint && <p className={styles.hint}>{hint}</p>}
       {items.map((item) => (
-        <label key={item.id} className={styles.row}>
-          <input type="checkbox" checked={value.includes(item.id)} onChange={() => toggle(item.id)} />
+        <label key={item.id} className={`${styles.row} ${disabled ? styles.rowDisabled : ''}`}>
+          <input
+            type="checkbox"
+            checked={value.includes(item.id)}
+            disabled={disabled}
+            onChange={() => toggle(item.id)}
+          />
           {item.name}
         </label>
       ))}

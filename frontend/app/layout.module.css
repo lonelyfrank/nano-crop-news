@@ -4,16 +4,8 @@
   flex-direction: column;
 }
 
-.pageContainer {
+.main {
   flex: 1;
   width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-@media (max-width: 480px) {
-  .pageContainer {
-    padding: 1rem;
-  }
+  min-width: 0;
 }

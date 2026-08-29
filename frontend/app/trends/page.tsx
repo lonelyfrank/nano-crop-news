@@ -49,48 +49,68 @@ export default function TrendsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRangeKey])
 
+  const maxRegionCount = regions?.length ? Math.max(...regions.map((r) => r.article_count)) : 1
+
   return (
-    <div>
-      <h1>Tendenze</h1>
-      <TimeRangeFilter value={timeRangeKey} onChange={setTimeRangeKey} />
+    <div className={styles.container}>
+      <div className={styles.pageHeader}>
+        <h1>Tendenze</h1>
+        <TimeRangeFilter value={timeRangeKey} onChange={setTimeRangeKey} />
+      </div>
 
-      <section className={styles.section}>
-        <h2>Storie di tendenza</h2>
-        <p className={styles.hint}>Notizie riprese da più fonti diverse nell&apos;intervallo scelto.</p>
-        {clusters === null && (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        )}
-        {clusters?.length === 0 && (
-          <p className={styles.hint}>Nessuna storia multi-fonte in questo intervallo.</p>
-        )}
-        {clusters?.map((cluster) => (
-          <ArticleCard
-            key={cluster.cluster_id}
-            article={cluster.article}
-            badge={`${cluster.source_count} fonti`}
-          />
-        ))}
-      </section>
-
-      <section className={styles.section}>
-        <h2>Zone di tendenza</h2>
-        {regions === null && <p className={styles.hint}>Caricamento…</p>}
-        {regions?.length === 0 && <p className={styles.hint}>Nessun dato geografico in questo intervallo.</p>}
-        <ol className={styles.regionList}>
-          {regions?.map((region) => (
-            <li key={region.id}>
-              <Link href={`/map?region=${region.id}`}>
-                {region.name}
-                <span className={styles.count}>{region.article_count}</span>
-              </Link>
-            </li>
+      <div className={styles.layout}>
+        <section className={styles.stories}>
+          <h2>Storie di tendenza</h2>
+          <p className={styles.hint}>Notizie riprese da più fonti diverse nell&apos;intervallo scelto.</p>
+          {clusters === null && (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          )}
+          {clusters?.length === 0 && (
+            <p className={styles.hint}>Nessuna storia multi-fonte in questo intervallo.</p>
+          )}
+          {clusters?.map((cluster) => (
+            <ArticleCard
+              key={cluster.cluster_id}
+              article={cluster.article}
+              badge={`${cluster.source_count} fonti`}
+            />
           ))}
-        </ol>
-      </section>
+        </section>
+
+        <aside className={styles.regionsPanel}>
+          <div className={styles.regionsHeader}>
+            <h2>Zone di tendenza</h2>
+            <Link href="/map" className={styles.mapLink}>
+              Apri la mappa →
+            </Link>
+          </div>
+          {regions === null && <p className={styles.hint}>Caricamento…</p>}
+          {regions?.length === 0 && <p className={styles.hint}>Nessun dato geografico in questo intervallo.</p>}
+          <ol className={styles.regionList}>
+            {regions?.map((region, index) => (
+              <li key={region.id}>
+                <Link href={`/map?region=${region.id}`} className={styles.regionRow}>
+                  <span className={styles.regionMain}>
+                    <span className={styles.rank}>{index + 1}.</span>
+                    <span className={styles.regionName}>{region.name}</span>
+                    <span className={styles.count}>{region.article_count}</span>
+                  </span>
+                  <span className={styles.volumeTrack}>
+                    <span
+                      className={styles.volumeBar}
+                      style={{ width: `${(region.article_count / maxRegionCount) * 100}%` }}
+                    />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </div>
     </div>
   )
 }

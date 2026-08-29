@@ -27,6 +27,7 @@ export function rangeForPreset(key: string): TimeRange {
 interface Props {
   value: string
   onChange: (key: string) => void
+  className?: string
 }
 
 /**
@@ -34,9 +35,9 @@ interface Props {
  * funzionale (filtrare per intervallo di date) senza introdurre una
  * libreria di slider o una gestione drag non banale.
  */
-export default function TimeRangeFilter({ value, onChange }: Props) {
+export default function TimeRangeFilter({ value, onChange, className }: Props) {
   return (
-    <div className={styles.group}>
+    <div className={`${styles.group} ${className ?? ''}`}>
       {PRESETS.map((preset) => (
         <button
           key={preset.key}

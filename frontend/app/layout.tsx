@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={styles.appShell}>
         <Header />
-        <main className={styles.pageContainer}>{children}</main>
+        <main className={styles.main}>{children}</main>
       </body>
     </html>
   )

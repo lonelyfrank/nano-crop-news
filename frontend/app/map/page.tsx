@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 // standard react-leaflet + Next.js App Router).
 const MapView = dynamic(() => import('@/components/MapView'), {
   ssr: false,
-  loading: () => <p>Caricamento mappa…</p>,
+  loading: () => <p style={{ padding: '1.5rem' }}>Caricamento mappa…</p>,
 })
 
 export default function MapPage() {

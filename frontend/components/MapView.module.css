@@ -1,18 +1,13 @@
 .layout {
   display: flex;
-  align-items: flex-start;
-  gap: 1.5rem;
-  height: calc(100vh - 8rem);
-  min-height: 420px;
+  align-items: stretch;
+  height: calc(100vh - 57px);
 }
 
 .mapWrapper {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
+  width: 46%;
+  position: relative;
+  border-right: 1px solid var(--border-color);
 }
 
 .map {
@@ -21,22 +16,179 @@
   background: var(--bg);
 }
 
-.panel {
-  width: 320px;
+.searchOverlay {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 500;
+  width: 260px;
+}
+
+.searchInput {
+  width: 100%;
+  display: block;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.88rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.searchResults {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.searchResults button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.searchResults button:hover {
+  background: var(--surface-active);
+}
+
+.searchResults button span {
+  color: var(--muted-text);
+  font-size: 0.78rem;
+}
+
+.legend {
+  position: absolute;
+  left: 16px;
+  bottom: 24px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.76rem;
+  color: var(--muted-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.legendDot {
+  display: inline-block;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.42;
+  border: 1px solid var(--accent);
   flex-shrink: 0;
-  height: 100%;
+}
+
+.panel {
+  flex: 1;
+  min-width: 0;
   overflow-y: auto;
-  padding-right: 0.25rem;
+}
+
+.panelSticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.zoneChips {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.8rem 1.5rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--divider-subtle);
+}
+
+.chip {
+  flex-shrink: 0;
+  padding: 0.32rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--chip-bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.chipCount {
+  color: var(--muted-text);
+  font-size: 0.75rem;
+}
+
+.chipActive .chipCount {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.zoneHeader {
+  padding: 1rem 1.5rem 0.9rem;
+}
+
+.breadcrumb {
+  font-size: 0.78rem;
+  color: var(--muted-text);
+  margin-bottom: 0.35rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .panelTitle {
-  margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.timeRangeInline {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.counts {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted-text);
+}
+
+.results {
+  padding: 0 1.5rem 1.5rem;
 }
 
 .hint {
   color: var(--muted-text);
   font-size: 0.9rem;
+  padding: 1rem 0;
 }
 
 @media (max-width: 768px) {
@@ -47,13 +199,19 @@
 
   .mapWrapper {
     width: 100%;
-    height: 50vh;
-    min-height: 320px;
+    height: 260px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .panel {
     width: 100%;
-    height: auto;
-    max-height: none;
+  }
+
+  .zoneChips,
+  .zoneHeader,
+  .results {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }

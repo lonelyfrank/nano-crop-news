@@ -131,6 +131,26 @@ export default function HomePage() {
     }, 400)
   }
 
+  function resetFilters() {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    setSearchInput('')
+    searchRef.current = ''
+    setSelectedSourceIds([])
+    selectedSourceIdsRef.current = []
+    setSelectedTagIds([])
+    selectedTagIdsRef.current = []
+    setTimeRangeKey('all')
+    timeRangeKeyRef.current = 'all'
+    resetAndReload()
+  }
+
+  function toggleSourceChip(id: number) {
+    const next = selectedSourceIds.includes(id)
+      ? selectedSourceIds.filter((existing) => existing !== id)
+      : [...selectedSourceIds, id]
+    updateSourceIds(next)
+  }
+
   useEffect(() => {
     async function init() {
       const [sourcesResponse, tagsResponse] = await Promise.all([
@@ -164,71 +184,100 @@ export default function HomePage() {
     }
   }, [])
 
+  const quickSources = sources.slice(0, 5)
+
   return (
-    <div className={styles.homeLayout}>
-      <div className={styles.feedColumn}>
-        <div className={styles.searchBar}>
-          <input
-            type="search"
-            className={styles.searchInput}
-            placeholder="Cerca negli articoli…"
-            value={searchInput}
-            onChange={(e) => updateSearch(e.target.value)}
+    <div className={styles.container}>
+      <div className={styles.homeLayout}>
+        <div className={styles.feedColumn}>
+          <div className={styles.searchBar}>
+            <input
+              type="search"
+              className={styles.searchInput}
+              placeholder="Cerca negli articoli…"
+              value={searchInput}
+              onChange={(e) => updateSearch(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.controlsBar}>
+            <button className={styles.filtersToggle} onClick={() => setShowFilters(true)}>
+              Filtri
+            </button>
+            <TimeRangeFilter value={timeRangeKey} onChange={updateTimeRange} />
+          </div>
+
+          {sources.length > 0 && (
+            <div className={styles.sourceChips}>
+              {quickSources.map((source) => (
+                <button
+                  key={source.id}
+                  type="button"
+                  className={`${styles.chip} ${selectedSourceIds.includes(source.id) ? styles.chipActive : ''}`}
+                  onClick={() => toggleSourceChip(source.id)}
+                >
+                  {source.name}
+                </button>
+              ))}
+              <button type="button" className={styles.chip} onClick={() => setShowFilters(true)}>
+                Tutte le {sources.length} fonti →
+              </button>
+            </div>
+          )}
+
+          {!articles.length && pending && (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          )}
+
+          {!articles.length && !pending && (
+            <div className={styles.emptyState}>
+              <p>Nessun articolo trovato.</p>
+              <button type="button" className={styles.resetButton} onClick={resetFilters}>
+                Reimposta filtri
+              </button>
+            </div>
+          )}
+
+          {articles.map((article) => (
+            <ArticleCard key={article.id} article={article} />
+          ))}
+
+          <div ref={sentinelRef} className={styles.sentinel} />
+          {pending && articles.length > 0 && <p className={styles.loading}>Caricamento…</p>}
+          {!hasMore && articles.length > 0 && !pending && (
+            <p className={styles.loading}>Non ci sono altri articoli.</p>
+          )}
+        </div>
+
+        {showFilters && <div className={styles.backdrop} onClick={() => setShowFilters(false)} />}
+
+        <aside className={`${styles.sidebar} ${showFilters ? styles.sidebarOpen : ''}`}>
+          <div className={styles.sidebarHeader}>
+            <h2>Filtri</h2>
+            <button
+              className={styles.sidebarClose}
+              aria-label="Chiudi filtri"
+              onClick={() => setShowFilters(false)}
+            >
+              ×
+            </button>
+          </div>
+
+          <CheckboxGroup items={sources} value={selectedSourceIds} onChange={updateSourceIds} label="Fonti" />
+          <CheckboxGroup
+            items={tags}
+            value={selectedTagIds}
+            onChange={updateTagIds}
+            label="Tag"
+            hint="Nessun articolo ha ancora tag assegnati automaticamente: il classificatore non esiste ancora, questo filtro è disattivato."
+            disabled
           />
-        </div>
-
-        <div className={styles.mobileFiltersBar}>
-          <button className={styles.filtersToggle} onClick={() => setShowFilters(true)}>
-            Filtri
-          </button>
-        </div>
-
-        {!articles.length && pending && (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        )}
-
-        {!articles.length && !pending && <p>Nessun articolo trovato.</p>}
-
-        {articles.map((article) => (
-          <ArticleCard key={article.id} article={article} />
-        ))}
-
-        <div ref={sentinelRef} className={styles.sentinel} />
-        {pending && articles.length > 0 && <p className={styles.loading}>Caricamento…</p>}
-        {!hasMore && articles.length > 0 && !pending && (
-          <p className={styles.loading}>Non ci sono altri articoli.</p>
-        )}
+        </aside>
       </div>
-
-      {showFilters && <div className={styles.backdrop} onClick={() => setShowFilters(false)} />}
-
-      <aside className={`${styles.sidebar} ${showFilters ? styles.sidebarOpen : ''}`}>
-        <div className={styles.sidebarHeader}>
-          <h2>Filtri</h2>
-          <button
-            className={styles.sidebarClose}
-            aria-label="Chiudi filtri"
-            onClick={() => setShowFilters(false)}
-          >
-            ×
-          </button>
-        </div>
-
-        <TimeRangeFilter value={timeRangeKey} onChange={updateTimeRange} />
-
-        <CheckboxGroup items={sources} value={selectedSourceIds} onChange={updateSourceIds} label="Fonti" />
-        <CheckboxGroup
-          items={tags}
-          value={selectedTagIds}
-          onChange={updateTagIds}
-          label="Tag"
-          hint="Nessun articolo ha ancora tag assegnati automaticamente: questo filtro può non restituire risultati."
-        />
-      </aside>
     </div>
   )
 }

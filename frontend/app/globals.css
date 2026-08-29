@@ -8,6 +8,17 @@
 
   --card-gap: 1rem;
   --card-padding-y: 1.25rem;
+
+  --surface-active: #f2f4fb;
+  --surface-active-border: #dce2f7;
+  --chip-bg: var(--card-bg);
+  --divider-subtle: #f0f0ee;
+  --placeholder-a: #eceae5;
+  --placeholder-b: #f6f5f2;
+  /* Testo sopra uno sfondo --accent pieno: bianco in chiaro, ma su
+     --accent chiaro (#60a5fa) in dark mode il bianco non passa il
+     contrasto — lì serve un testo scuro. */
+  --on-accent: #ffffff;
 }
 
 /* Segue il sistema operativo solo finché l'utente non ha scelto
@@ -20,6 +31,13 @@
     --bg: #121212;
     --text: #f2f2f2;
     --card-bg: #1a1a1a;
+
+    --surface-active: #1b2436;
+    --surface-active-border: #2c3b57;
+    --divider-subtle: #1f1f1f;
+    --placeholder-a: #242424;
+    --placeholder-b: #1a1a1a;
+    --on-accent: #0d1b33;
   }
 }
 
@@ -30,6 +48,13 @@
   --bg: #121212;
   --text: #f2f2f2;
   --card-bg: #1a1a1a;
+
+  --surface-active: #1b2436;
+  --surface-active-border: #2c3b57;
+  --divider-subtle: #1f1f1f;
+  --placeholder-a: #242424;
+  --placeholder-b: #1a1a1a;
+  --on-accent: #0d1b33;
 }
 
 :root[data-theme='light'] {
@@ -39,6 +64,13 @@
   --bg: #ffffff;
   --text: #1a1a1a;
   --card-bg: #ffffff;
+
+  --surface-active: #f2f4fb;
+  --surface-active-border: #dce2f7;
+  --divider-subtle: #f0f0ee;
+  --placeholder-a: #eceae5;
+  --placeholder-b: #f6f5f2;
+  --on-accent: #ffffff;
 }
 
 :root[data-density='compact'] {

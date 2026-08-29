@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import AppearanceMenu from './AppearanceMenu'
+import NavLinks from './NavLinks'
 import styles from './Header.module.css'
 
 export default function Header() {
@@ -8,11 +9,10 @@ export default function Header() {
       <Link href="/" className={styles.brand}>
         Nano Crop News
       </Link>
-      <nav className={styles.topNav}>
-        <Link href="/trends">Tendenze</Link>
-        <Link href="/map">Mappa</Link>
+      <NavLinks />
+      <div className={styles.appearanceSlot}>
         <AppearanceMenu />
-      </nav>
+      </div>
     </header>
   )
 }
