@@ -1,7 +1,6 @@
 # Nano Crop News
 
-Aggregatore di notizie personale, gratuito e open-source, ispirato a
-[Column.news](https://column.news). Live su
+Aggregatore di notizie personale, gratuito e open-source. Live su
 [lonelyfrank-nano-crop-news.vercel.app](https://lonelyfrank-nano-crop-news.vercel.app/).
 
 ## Principi guida
